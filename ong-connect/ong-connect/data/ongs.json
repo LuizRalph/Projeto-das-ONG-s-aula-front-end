@@ -1,0 +1,77 @@
+[
+  {
+    "id": 1,
+    "nome": "Instituto Esperança",
+    "sigla": "IE",
+    "categoria": "Educação",
+    "cidade": "São Paulo",
+    "descricao": "Acesso à educação, leitura e inclusão digital para crianças e jovens.",
+    "cor": "#0c8b7b",
+    "email": "contato@institutoesperanca.exemplo",
+    "missao": "Ampliar oportunidades de aprendizagem.",
+    "imagem": "assets/images/demo/ong-1.svg"
+  },
+  {
+    "id": 2,
+    "nome": "Rede Mãos Solidárias",
+    "sigla": "MS",
+    "categoria": "Assistência social",
+    "cidade": "Campinas",
+    "descricao": "Mobilização de voluntários para combater a insegurança alimentar.",
+    "cor": "#d88342",
+    "email": "contato@maossolidarias.exemplo",
+    "missao": "Combater a fome com dignidade.",
+    "imagem": "assets/images/demo/ong-2.svg"
+  },
+  {
+    "id": 3,
+    "nome": "Verde Futuro",
+    "sigla": "VF",
+    "categoria": "Meio ambiente",
+    "cidade": "Santos",
+    "descricao": "Educação ambiental, reflorestamento e recuperação de espaços públicos.",
+    "cor": "#5a8b4d",
+    "email": "contato@verdefuturo.exemplo",
+    "missao": "Preservar a natureza por meio da ação comunitária.",
+    "imagem": "assets/images/demo/ong-3.svg"
+  },
+  {
+    "id": 4,
+    "nome": "Instituto Vida em Movimento",
+    "sigla": "VM",
+    "categoria": "Saúde",
+    "cidade": "Guarulhos",
+    "estado": "SP",
+    "descricao": "Promove ações educativas de saúde preventiva, bem-estar e acesso comunitário a atividades físicas.",
+    "cor": "#a54e77",
+    "email": "contato@vidaemmovimento.exemplo",
+    "missao": "Promover saúde e qualidade de vida em comunidades com acesso limitado a serviços preventivos.",
+    "imagem": "assets/images/demo/ong-4.svg"
+  },
+  {
+    "id": 5,
+    "nome": "Associação Patas e Afeto",
+    "sigla": "PA",
+    "categoria": "Proteção animal",
+    "cidade": "São Bernardo do Campo",
+    "estado": "SP",
+    "descricao": "Desenvolve campanhas educativas de adoção responsável e cuidados básicos com animais.",
+    "cor": "#b27934",
+    "email": "contato@pataseafeto.exemplo",
+    "missao": "Estimular a guarda responsável e o respeito aos animais.",
+    "imagem": "assets/images/demo/ong-5.svg"
+  },
+  {
+    "id": 6,
+    "nome": "Coletivo Cultura Viva",
+    "sigla": "CV",
+    "categoria": "Cultura",
+    "cidade": "Osasco",
+    "estado": "SP",
+    "descricao": "Oferece oficinas culturais, acesso à arte e atividades de expressão para jovens e famílias.",
+    "cor": "#6155a7",
+    "email": "contato@culturaviva.exemplo",
+    "missao": "Ampliar o acesso à cultura e fortalecer vínculos comunitários por meio da arte.",
+    "imagem": "assets/images/demo/ong-6.svg"
+  }
+]
