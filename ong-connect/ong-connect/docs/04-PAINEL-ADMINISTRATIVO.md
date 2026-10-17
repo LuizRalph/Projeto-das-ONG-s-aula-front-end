@@ -10,11 +10,13 @@ Três painéis expansíveis: **Solicitações de cadastro** (fechado ao abrir), 
 
 A análise permite aprovar ou rejeitar. Ao aprovar/continuar, o cadastro abre com informações existentes. O administrador pode solicitar complementação, salvar rascunho, editar dados, concluir e publicar. O formulário institucional está dividido em identificação, endereço, responsáveis, perfil, documentação e doações/parcerias. Documentos sensíveis não são armazenados.
 
+O envio público e a publicação administrativa bloqueiam CNPJ associado a outro pedido ativo ou ONG publicada. Edição da própria ONG e conclusão do próprio pedido são exceções permitidas. Uma nova solicitação após rejeição mantém vínculo com a anterior.
+
 ## Gerenciar projetos — `dashboard/projetos.html`
 Formulário para criar ou editar projetos associados a uma ONG e listagem dos projetos cadastrados. As alterações persistem no navegador e alimentam os catálogos públicos.
 
 ## Voluntários — `dashboard/voluntarios.html`
-Mostra candidaturas, dados fornecidos pelo interessado e controles de análise. Aprovação ou rejeição exige informações de decisão; o histórico é local e ilustrativo. Vagas disponíveis consideram candidaturas aprovadas.
+Mostra uma visão global, organizada em acordeões por projeto e oportunidade, com filtros por projeto, oportunidade e estado. Projetos com oportunidades sem candidaturas continuam visíveis. Aprovação e promoção da lista exigem vaga, responsável e justificativa; rejeição exige justificativa. Registrar desistência de uma pessoa aprovada exige responsável e justificativa e libera capacidade. Ao preencher a última vaga, candidaturas pendentes restantes passam para `Lista de espera`. As mudanças são registradas no histórico local e ilustrativo.
 
 ## Doações — `dashboard/doacoes.html`
 Exibe histórico de contribuições **simuladas**, filtros e totais associados aos registros demonstrativos. Não representa extrato bancário nem confirmação de pagamento.

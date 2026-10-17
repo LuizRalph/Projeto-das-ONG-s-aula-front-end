@@ -3,6 +3,8 @@
 ## Etapa 1 — Solicitação pública
 O visitante abre **Cadastrar minha ONG** na página inicial e informa os dados solicitados (como nome, CNPJ, cidade, responsável, e-mail, telefone e descrição). A validação do formulário deve ser satisfeita antes de registrar o pedido. O pedido recebe status `Pendente`.
 
+O CNPJ é normalizado para comparação sem pontuação. Um pedido não pode ser enviado se já existir uma solicitação não rejeitada ou uma ONG cadastrada com o mesmo CNPJ. Após rejeição, uma nova tentativa é permitida e fica vinculada à solicitação rejeitada anterior. A checagem é local; não consulta bases oficiais.
+
 ## Etapa 2 — Análise inicial
 Em **Dashboard → Gerenciar ONGs → Solicitações**, o administrador visualiza os dados e pode:
 - **Aprovar**: status `Aprovado`, com abertura do formulário de cadastro preenchido com informações já recebidas.
@@ -18,6 +20,8 @@ O formulário complementar recolhe informações institucionais adicionais. Quan
 
 ## Etapa 5 — Revisão, rascunho e publicação
 O administrador escolhe **Continuar cadastro** ou **Revisar e publicar**. O sistema recupera dados iniciais, complementação e eventual rascunho. Pode salvar como rascunho sem publicar ou completar os campos e concluir. Após a publicação, a solicitação passa a `Cadastrada`.
+
+Antes de publicar, o sistema repete a checagem de CNPJ para evitar duplicidade. Ao editar uma ONG existente, o próprio cadastro é excluído da comparação; ao concluir uma solicitação, o próprio pedido também é excluído.
 
 ## Seis grupos do cadastro institucional
 1. **Identificação**: razão social, nome, sigla, CNPJ, natureza, categoria e outros dados.
@@ -39,3 +43,5 @@ O administrador escolhe **Continuar cadastro** ou **Revisar e publicar**. O sist
 
 ## Observações
 Dados permanecem no `localStorage`; não há envio de e-mail, verificação oficial do CNPJ, armazenamento seguro de documentos ou comunicação entre computadores. São limitações do protótipo acadêmico.
+
+As solicitações rejeitadas não são apagadas. A nova solicitação guarda `solicitacaoAnteriorId` para preservar a relação entre tentativas.

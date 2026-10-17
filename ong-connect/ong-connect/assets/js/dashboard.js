@@ -15,6 +15,16 @@ if(page==='admin-ongs'){
  const extraFields=()=>Object.fromEntries([...document.querySelectorAll('[data-extra]')].map(el=>[el.dataset.extra,el.value.trim()]));
  const fillExtras=v=>document.querySelectorAll('[data-extra]').forEach(el=>{el.value=v?.[el.dataset.extra]||''});
  const fields={nome:'#ong-nome',sigla:'#ong-sigla',categoria:'#ong-categoria',cidade:'#ong-cidade',email:'#ong-email',cor:'#ong-cor',descricao:'#ong-descricao',missao:'#ong-missao'};
+ $('#ong-form').addEventListener('submit',e=>{
+  const form=e.currentTarget,field=form.querySelector('[data-extra="cnpj"]');
+  if(!field)return;
+  const currentOngId=Number($('#edit-ong-id').value)||null;
+  if(cnpjOcupado(field.value,currentOngId?null:approvedRequestId,currentOngId)){
+   e.preventDefault();
+   e.stopImmediatePropagation();
+   toast('Este CNPJ já está associado a outra solicitação ativa ou ONG cadastrada.',true);
+  }
+ },true);
  let imagemAtual='';
  let imagemEmAnalise=false;
  let imagemInvalida=false;
@@ -64,10 +74,107 @@ if(page==='admin-ongs'){
 }
 if(page==='admin-projects'){
  const fields={ongId:'#ong',titulo:'#titulo',categoria:'#categoria',meta:'#meta',descricao:'#descricao'};
- const reset=()=>{$('#project-form').reset();$('#ong').value='';$('#edit-project-id').value='';$('#project-form-title').textContent='Novo projeto (demonstração)';$('#save-project').textContent='Cadastrar projeto';$('#cancel-project').hidden=true};
+ const legacyDays=period=>{const value=String(period||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(),terms={SEG:['segunda','seg'],TER:['terca','ter'],QUA:['quarta','qua'],QUI:['quinta','qui'],SEX:['sexta','sex'],SAB:['sabado','sab'],DOM:['domingo','dom']};return dayOptions.filter(([day])=>terms[day].some(term=>value.includes(term))).map(([day])=>day)};
+ const projectDays=()=>$$('.project-day',editor).filter(input=>input.checked).map(input=>input.value);
+ const setProjectDays=days=>$$('.project-day',editor).forEach(input=>{input.checked=days.includes(input.value)});
+ const reset=()=>{$('#project-form').reset();$('#ong').value='';$('#edit-project-id').value='';$('#project-volunteers-needed').value='0';setProjectDays([]);$('#project-opportunity-list').replaceChildren();$('#project-form-title').textContent='Novo projeto (demonstração)';$('#save-project').textContent='Cadastrar projeto';$('#cancel-project').hidden=true};
  $('#ong').innerHTML='<option value="" selected disabled>Selecione a ONG responsável</option>'+data.ongs.map(o=>`<option value="${o.id}">${escapeHtml(o.nome)}</option>`).join('');
- const refresh=()=>{$('#admin-projects').innerHTML=adminTable(['Projeto','ONG','Categoria','Meta','Ações'],data.projetos.map(p=>[escapeHtml(p.titulo),escapeHtml(ong(p.ongId)?.nome),escapeHtml(p.categoria),money(p.meta),`<button type="button" class="btn btn-sm btn-outline edit-project" data-id="${p.id}">Editar</button>`]));$$('.edit-project').forEach(b=>b.onclick=()=>{const p=projeto(b.dataset.id);$('#edit-project-id').value=p.id;for(const [key,sel] of Object.entries(fields))$(sel).value=p[key];$('#project-form-title').textContent='Editar projeto';$('#save-project').textContent='Salvar alterações';$('#cancel-project').hidden=false;$('#project-form').scrollIntoView({behavior:'smooth',block:'start'});$('#titulo').focus()})};
- $('#cancel-project').onclick=reset;refresh();$('#project-form').onsubmit=e=>{e.preventDefault();if(!e.currentTarget.reportValidity())return;const id=Number($('#edit-project-id').value);const values={ongId:Number($('#ong').value),titulo:$('#titulo').value.trim(),categoria:$('#categoria').value,meta:Number($('#meta').value),descricao:$('#descricao').value.trim()};if(!values.titulo||!values.descricao||values.meta<=0||!ong(values.ongId))return toast('Confira os dados do projeto.',true);try{if(id){const changes=store.get('projetos_edicoes',{});changes[id]=values;store.set('projetos_edicoes',changes);Object.assign(projeto(id),values)}else{const novo={id:Math.max(0,...data.projetos.map(p=>p.id))+1,...values,arrecadado:0,voluntarios:0,status:'Ativo',emoji:'🤝',criadoEm:new Date().toISOString()};const extras=store.get('projetos');extras.push(novo);store.set('projetos',extras);data.projetos.push(novo)}}catch(err){return toast('Não foi possível salvar o projeto neste navegador.',true)}refresh();reset();toast(id?'Projeto atualizado com sucesso.':'Projeto cadastrado com sucesso.')};
+ const projectForm=$('#project-form'),dayOptions=[['SEG','Segunda-feira'],['TER','Terça-feira'],['QUA','Quarta-feira'],['QUI','Quinta-feira'],['SEX','Sexta-feira'],['SAB','Sábado'],['DOM','Domingo']];
+ const editor=document.createElement('section');editor.className='form-group full project-volunteer-editor';
+ editor.innerHTML=`<h3>Planejamento de voluntariado</h3><p class="note">A meta conta pessoas únicas; vagas e horários são definidos por oportunidade.</p><div class="form-group"><label for="project-volunteers-needed">Voluntários necessários</label><input class="field" id="project-volunteers-needed" type="number" min="0" max="10000" step="1" value="0"><small class="muted">Use 0 quando o projeto não precisar de voluntários.</small></div><fieldset class="project-days"><legend>Dias de atuação padrão</legend><div class="project-day-options">${dayOptions.map(([value,label])=>`<label><input type="checkbox" class="project-day" value="${value}"> ${label}</label>`).join('')}</div></fieldset><div class="project-opportunities"><div class="project-opportunities-heading"><div><h4>Oportunidades</h4><p class="muted">Cada oportunidade tem vagas e horário próprios; os dias padrão vêm do projeto.</p></div><button type="button" class="btn btn-outline btn-sm" id="add-project-opportunity">Adicionar oportunidade</button></div><div id="project-opportunity-list"></div></div>`;
+ $('#save-project').parentElement.before(editor);
+ let opportunityRowId=0;
+ const addOpportunityRow=(item={})=>{
+  const rowId=++opportunityRowId,existing=item.id!==undefined&&item.id!==null,container=$('#project-opportunity-list');
+  const hasApplications=existing&&store.get('candidaturas',[]).some(c=>Number(c.oportunidadeId)===Number(item.id));
+  const row=document.createElement('fieldset');row.className='project-opportunity-row';row.dataset.opportunityId=existing?String(item.id):'';
+  row.innerHTML=`<legend>${existing?'Oportunidade cadastrada':'Nova oportunidade'}</legend><div class="form-grid"><div class="form-group"><label for="opportunity-title-${rowId}">Função / oportunidade *</label><input id="opportunity-title-${rowId}" class="field opportunity-title" maxlength="100" required value="${escapeHtml(item.titulo||'')}"></div><div class="form-group"><label for="opportunity-vacancies-${rowId}">Vagas *</label><input id="opportunity-vacancies-${rowId}" class="field opportunity-vacancies" type="number" min="1" max="10000" step="1" required value="${escapeHtml(item.vagas??1)}"></div><div class="form-group"><label for="opportunity-modality-${rowId}">Modalidade *</label><select id="opportunity-modality-${rowId}" class="field opportunity-modality" required><option value="">Selecione</option><option value="Presencial">Presencial</option><option value="Híbrido">Híbrido</option><option value="Remoto">Remoto</option></select></div><div class="form-group"><label for="opportunity-location-${rowId}">Local *</label><input id="opportunity-location-${rowId}" class="field opportunity-location" maxlength="100" required value="${escapeHtml(item.local||'')}"></div><fieldset class="form-group full opportunity-days"><legend>Dias específicos (opcional; em branco usa os dias padrão do projeto)</legend><div>${dayOptions.map(([value,label])=>`<label><input type="checkbox" class="opportunity-day" value="${value}" ${Array.isArray(item.diasAtuacao)&&item.diasAtuacao.includes(value)?'checked':''}> ${label}</label>`).join('')}</div></fieldset><div class="form-group"><label for="opportunity-start-${rowId}">Início *</label><input id="opportunity-start-${rowId}" class="field opportunity-start" type="time" required value="${escapeHtml(item.horarioInicio||'09:00')}"></div><div class="form-group"><label for="opportunity-end-${rowId}">Término *</label><input id="opportunity-end-${rowId}" class="field opportunity-end" type="time" required value="${escapeHtml(item.horarioFim||'12:00')}"></div><div class="form-group"><label for="opportunity-period-${rowId}">Período / observação</label><input id="opportunity-period-${rowId}" class="field opportunity-period" maxlength="100" value="${escapeHtml(item.periodo||'')}"></div><div class="form-group opportunity-remove-wrap"><button type="button" class="btn btn-outline btn-sm remove-project-opportunity" ${hasApplications?'disabled title="Não é possível remover: há candidaturas vinculadas a esta oportunidade."':''}>Remover</button></div></div>${existing&&(!item.horarioInicio||!item.horarioFim)?'<small class="muted">Horários sugeridos para dados antigos; revise antes de salvar.</small>':''}`;
+  container.append(row);
+  $(`#opportunity-modality-${rowId}`).value=item.modalidade||'';
+ };
+ $('#add-project-opportunity').addEventListener('click',()=>addOpportunityRow());
+ $('#project-opportunity-list').addEventListener('click',e=>{const button=e.target.closest('.remove-project-opportunity');if(button&&!button.disabled)button.closest('.project-opportunity-row').remove()});
+ const readOpportunityRows=defaults=>{
+  const rows=$$('.project-opportunity-row',$('#project-opportunity-list')),result=[];
+  for(const row of rows){
+   const days=$$('.opportunity-day',row).filter(input=>input.checked).map(input=>input.value),effectiveDays=days.length?days:defaults;
+   const record={id:row.dataset.opportunityId?Number(row.dataset.opportunityId):null,titulo:$('.opportunity-title',row).value.trim(),vagas:Number($('.opportunity-vacancies',row).value),modalidade:$('.opportunity-modality',row).value,local:$('.opportunity-location',row).value.trim(),diasAtuacao:effectiveDays,horarioInicio:$('.opportunity-start',row).value,horarioFim:$('.opportunity-end',row).value,periodo:$('.opportunity-period',row).value.trim()};
+   if(!record.titulo||!Number.isInteger(record.vagas)||record.vagas<1||!record.modalidade||!record.local)return {error:'Preencha função, vagas, modalidade e local de cada oportunidade.'};
+   if(!record.diasAtuacao.length)return {error:'Defina dias padrão no projeto ou dias específicos em cada oportunidade.'};
+   if(!record.horarioInicio||!record.horarioFim||record.horarioFim<=record.horarioInicio)return {error:'O término de cada oportunidade deve ser posterior ao horário de início.'};
+   result.push(record);
+  }
+  return {rows:result};
+ };
+ const refresh=()=>{
+  $('#admin-projects').innerHTML=adminTable(['Projeto','ONG','Categoria','Meta (R$)','Pessoas necessárias','Vagas','Oportunidades','Ações'],data.projetos.map(p=>{
+   const opportunities=data.oportunidades.filter(o=>Number(o.projetoId)===Number(p.id));
+   return [escapeHtml(p.titulo),escapeHtml(ong(p.ongId)?.nome),escapeHtml(p.categoria),money(p.meta),String(p.voluntariosNecessarios??'—'),String(opportunities.reduce((sum,item)=>sum+(Number(item.vagas)||0),0)),String(opportunities.length),`<button type="button" class="btn btn-sm btn-outline edit-project" data-id="${p.id}">Editar</button>`];
+  }));
+  $$('.edit-project').forEach(button=>button.onclick=()=>{
+   const p=projeto(button.dataset.id),linked=data.oportunidades.filter(o=>Number(o.projetoId)===Number(p.id));
+   $('#edit-project-id').value=p.id;
+   for(const [key,selector] of Object.entries(fields))$(selector).value=p[key]??'';
+   $('#project-volunteers-needed').value=Number(p.voluntariosNecessarios)||0;
+   const defaultDays=Array.isArray(p.diasAtuacao)&&p.diasAtuacao.length?p.diasAtuacao:[...new Set(linked.flatMap(o=>Array.isArray(o.diasAtuacao)&&o.diasAtuacao.length?o.diasAtuacao:legacyDays(o.periodo)))];
+   setProjectDays(defaultDays);
+   $('#project-opportunity-list').replaceChildren();
+  linked.forEach(item=>addOpportunityRow({...item,diasAtuacao:Array.isArray(item.diasEspecificos)?item.diasEspecificos:Array.isArray(item.diasAtuacao)?item.diasAtuacao:legacyDays(item.periodo)}));
+   $('#project-form-title').textContent='Editar projeto';
+   $('#save-project').textContent='Salvar alterações';
+   $('#cancel-project').hidden=false;
+   $('#project-form').scrollIntoView({behavior:'smooth',block:'start'});
+   $('#titulo').focus();
+  });
+ };
+ $('#cancel-project').onclick=reset;
+ refresh();
+ projectForm.addEventListener('submit',e=>{
+  e.preventDefault();
+  if(!projectForm.reportValidity())return;
+  const editingId=Number($('#edit-project-id').value)||null,volunteersNeeded=Number($('#project-volunteers-needed').value),defaultDays=projectDays();
+  if(!Number.isInteger(volunteersNeeded)||volunteersNeeded<0)return toast('Informe uma meta inteira de voluntários igual ou maior que zero.',true);
+  const parsed=readOpportunityRows(defaultDays);
+  if(parsed.error)return toast(parsed.error,true);
+  if(volunteersNeeded>0&&!parsed.rows.length)return toast('Cadastre ao menos uma oportunidade para receber voluntários.',true);
+  const values={ongId:Number($('#ong').value),titulo:$('#titulo').value.trim(),categoria:$('#categoria').value,meta:Number($('#meta').value),descricao:$('#descricao').value.trim(),voluntariosNecessarios:volunteersNeeded,diasAtuacao:defaultDays};
+  if(!values.titulo||!values.descricao||values.meta<=0||!ong(values.ongId))return toast('Confira os dados do projeto.',true);
+  const previousProject=editingId?projeto(editingId):null;
+  if(editingId&&!previousProject)return toast('O projeto selecionado não foi encontrado.',true);
+  const currentLinked=editingId?data.oportunidades.filter(o=>Number(o.projetoId)===editingId):[];
+  const submittedIds=new Set(parsed.rows.filter(o=>o.id!==null).map(o=>String(o.id)));
+  const removed=currentLinked.filter(o=>!submittedIds.has(String(o.id)));
+  const candidateRecords=store.get('candidaturas',[]);
+  if(removed.some(o=>candidateRecords.some(c=>Number(c.oportunidadeId)===Number(o.id))))return toast('Não é possível remover uma oportunidade com candidaturas vinculadas.',true);
+  let projectRecord;
+  if(previousProject)projectRecord={...previousProject,...values};
+  else projectRecord={id:Math.max(0,...data.projetos.map(p=>Number(p.id)||0))+1,...values,arrecadado:0,voluntarios:0,status:'Ativo',emoji:'🤝',criadoEm:new Date().toISOString()};
+  let nextOpportunityId=Math.max(0,...data.oportunidades.map(o=>Number(o.id)||0),...store.get('oportunidades_removidas',[]).map(Number))+1;
+  const opportunityRows=$$('.project-opportunity-row',$('#project-opportunity-list'));
+  const opportunityRecords=parsed.rows.map((row,index)=>{
+   const specificDays=opportunityRows[index];
+   const selectedDays=specificDays?$$('.opportunity-day',specificDays).filter(input=>input.checked).map(input=>input.value):[];
+   return {...row,id:row.id??nextOpportunityId++,projetoId:projectRecord.id,diasEspecificos:selectedDays};
+  });
+  const keys=['projetos','projetos_edicoes','oportunidades','oportunidades_edicoes','oportunidades_removidas'],snapshots=Object.fromEntries(keys.map(key=>[`ongconnect_${key}`,localStorage.getItem(`ongconnect_${key}`)]));
+  const localProjects=store.get('projetos',[]),projectEdits=store.get('projetos_edicoes',{}),localOpportunities=store.get('oportunidades',[]),opportunityEdits=store.get('oportunidades_edicoes',{}),removedIds=new Set(store.get('oportunidades_removidas',[]).map(String));
+  if(previousProject)projectEdits[editingId]=values;else localProjects.push(projectRecord);
+  for(const item of opportunityRecords){
+   if(parsed.rows.find(row=>Number(row.id)===Number(item.id)))opportunityEdits[item.id]=item;
+   else localOpportunities.push(item);
+  }
+  for(const item of removed){removedIds.add(String(item.id));delete opportunityEdits[item.id]}
+  try{
+   store.set('projetos',localProjects);store.set('projetos_edicoes',projectEdits);store.set('oportunidades',localOpportunities);store.set('oportunidades_edicoes',opportunityEdits);store.set('oportunidades_removidas',[...removedIds]);
+  }catch(error){
+   for(const [key,value] of Object.entries(snapshots)){if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value)}
+   return toast('Não foi possível salvar projeto e oportunidades. Libere espaço no navegador e tente novamente.',true);
+  }
+  if(previousProject)Object.assign(previousProject,values);else data.projetos.push(projectRecord);
+  data.oportunidades=data.oportunidades.filter(o=>!removedIds.has(String(o.id)));
+  for(const item of opportunityRecords){const existing=data.oportunidades.find(o=>Number(o.id)===Number(item.id));if(existing)Object.assign(existing,item);else data.oportunidades.push(item)}
+  refresh();reset();toast(editingId?'Projeto e oportunidades atualizados.':'Projeto e oportunidades cadastrados.');
+ });
 }
 if(page==='admin-volunteers'){
  const opportunity=id=>data.oportunidades.find(o=>Number(o.id)===Number(id));
@@ -75,11 +182,93 @@ if(page==='admin-volunteers'){
  const fmtDate=d=>{const dt=new Date(d);return Number.isNaN(dt.getTime())?'—':dt.toLocaleString('pt-BR')};
  const close=(id)=>{const el=$(id);el.hidden=true;if(!$$('.modal-overlay:not([hidden])').length)document.body.classList.remove('modal-open')};
  const open=(id)=>{$(id).hidden=false;document.body.classList.add('modal-open')};
- const refresh=()=>{const arr=candidaturas();const rows=arr.map(c=>[escapeHtml(c.nome),escapeHtml(opportunity(c.oportunidadeId)?.titulo||'Oportunidade'),escapeHtml(ong(projeto(opportunity(c.oportunidadeId)?.projetoId)?.ongId)?.nome||'ONG não identificada'),fmtDate(c.data),`<span class="status-pill status-${escapeHtml(String(c.status).toLowerCase())}">${escapeHtml(c.status)}</span>`,`<div class="inline-actions"><button type="button" class="btn btn-sm btn-outline view-candidate" data-id="${c.id}">Visualizar</button><button type="button" class="btn btn-sm approve-candidate" data-id="${c.id}" ${c.status==='Aprovado'||c.status==='Rejeitado'?'disabled':''}>Aprovar</button><button type="button" class="btn btn-sm btn-outline reject-candidate" data-id="${c.id}" ${c.status==='Rejeitado'?'disabled':''}>${c.status==='Rejeitado'?'Rejeitado':'Rejeitar'}</button></div>`]);$('#admin-volunteers').innerHTML=rows.length?adminTable(['Nome','Oportunidade','ONG','Data','Status','Ações'],rows):'<div class="empty">Nenhuma candidatura simulada registrada.</div>';
- $$('.view-candidate').forEach(b=>b.onclick=()=>{const c=candidaturas().find(x=>String(x.id)===b.dataset.id);if(!c)return;const fields=[['Nome',c.nome],['Oportunidade',opportunity(c.oportunidadeId)?.titulo],['ONG',ong(projeto(opportunity(c.oportunidadeId)?.projetoId)?.ongId)?.nome],['Status',c.status],['E-mail',c.email],['Telefone / WhatsApp',c.telefone],['Nascimento',c.nascimento],['Cidade',c.cidade],['Estado',c.estado],['Disponibilidade',c.disponibilidade],['Experiência',c.experiencia],['Habilidades',c.habilidades],['Motivação',c.motivacao],['Data da candidatura',fmtDate(c.data)],['Motivo da rejeição',c.motivoRejeicao]];const logs=history(c);$('#candidate-details').innerHTML=fields.filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>`<div class="detail-field"><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v)}</span></div>`).join('')+`<div class="full"><h3>Histórico de decisões</h3>${logs.length?'<ol class="audit-list">'+logs.map(h=>`<li><strong>${escapeHtml(h.status)}</strong> — ${escapeHtml(fmtDate(h.data))}<div>Responsável: ${escapeHtml(h.responsavel)}</div><div>Justificativa: ${escapeHtml(h.justificativa)}</div><div class="muted">Anterior: ${escapeHtml(h.statusAnterior||'—')}</div></li>`).join('')+'</ol>':'<p class="muted">Nenhuma decisão registrada nesta versão.</p>'}</div>`;open('#candidate-modal');$('#close-candidate-modal').focus()});
- $$('.approve-candidate,.reject-candidate').forEach(b=>b.onclick=()=>{const c=candidaturas().find(x=>String(x.id)===b.dataset.id);if(!c)return;if(c.status==='Rejeitado')return toast('Esta candidatura foi rejeitada definitivamente e não pode ser alterada.',true);const status=b.classList.contains('approve-candidate')?'Aprovado':'Rejeitado';if(c.status===status&&status==='Aprovado')return;$('#decision-form').reset();$('#decision-id').value=c.id;$('#decision-status').value=status;$('#decision-title').textContent=status==='Aprovado'?'Aprovar candidatura':c.status==='Rejeitado'?'Reavaliar justificativa da rejeição':'Rejeitar candidatura';$('#decision-subtitle').textContent=`${c.nome} — ${opportunity(c.oportunidadeId)?.titulo||'Oportunidade'}`;$('#confirm-decision').textContent=status==='Aprovado'?'Confirmar aprovação':c.status==='Rejeitado'?'Registrar nova justificativa':'Confirmar rejeição';open('#decision-modal');$('#decision-reviewer').focus()});
+ const filters=document.createElement('div');filters.className='filters volunteer-filters';filters.innerHTML='<label for="volunteer-filter-project">Projeto</label><select class="field" id="volunteer-filter-project"><option value="">Todos</option></select><label for="volunteer-filter-opportunity">Oportunidade</label><select class="field" id="volunteer-filter-opportunity"><option value="">Todas</option></select><label for="volunteer-filter-status">Status</label><select class="field" id="volunteer-filter-status"><option value="">Todos</option></select>';
+ $('#admin-volunteers').before(filters);
+ filters.querySelector('#volunteer-filter-project').insertAdjacentHTML('beforeend',data.projetos.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.titulo)}</option>`).join(''));
+ filters.querySelector('#volunteer-filter-opportunity').insertAdjacentHTML('beforeend',data.oportunidades.map(o=>`<option value="${escapeHtml(o.id)}">${escapeHtml(o.titulo)}</option>`).join(''));
+ filters.querySelector('#volunteer-filter-status').insertAdjacentHTML('beforeend',['Pendente','Lista de espera','Aprovado','Desistente','Rejeitado'].map(status=>`<option>${escapeHtml(status)}</option>`).join(''));
+ filters.querySelectorAll('select').forEach(el=>el.addEventListener('change',()=>refresh()));
+ const refresh=()=>{
+  const selectedOpportunity=$('#volunteer-filter-opportunity').value,selectedStatus=$('#volunteer-filter-status').value;
+    const selectedProject=$('#volunteer-filter-project').value,all=candidaturas();
+    const projects=data.projetos.filter(p=>!selectedProject||String(p.id)===selectedProject).map(project=>{
+     const opportunities=data.oportunidades.filter(item=>Number(item.projetoId)===Number(project.id));
+     if(!opportunities.length)return '';
+     const projectCandidates=all.filter(candidate=>opportunities.some(item=>Number(item.id)===Number(candidate.oportunidadeId)));
+     const approvedUnique=new Set(projectCandidates.filter(candidate=>candidate.status==='Aprovado').map(candidate=>normalizarEmail(candidate.email))).size;
+     const goal=Number(project.voluntariosNecessarios)||0;
+     const statusSummary=['Pendente','Lista de espera','Aprovado','Desistente','Rejeitado'].map(status=>{
+      const count=projectCandidates.filter(candidate=>candidate.status===status).length;
+      return count?`<span class="volunteer-summary-status">${escapeHtml(status)}: ${count}</span>`:'';
+     }).join('');
+     const opportunitySections=opportunities.filter(item=>!selectedOpportunity||String(item.id)===selectedOpportunity).map(item=>{
+      const dayLabels={SEG:'Seg',TER:'Ter',QUA:'Qua',QUI:'Qui',SEX:'Sex',SAB:'Sáb',DOM:'Dom'};
+      const days=diasOportunidade(item).map(day=>dayLabels[day]||day).join(', ')||'Dias não definidos';
+      const approved=aprovadosOportunidade(item.id),available=vagasDisponiveis(item),waiting=candidaturasEmEspera(item.id);
+      const records=projectCandidates.filter(candidate=>Number(candidate.oportunidadeId)===Number(item.id)&&(!selectedStatus||candidate.status===selectedStatus));
+      const rows=records.map(candidate=>{
+       const reviewable=['Pendente','Lista de espera'].includes(candidate.status);
+       const action=reviewable?`<button type="button" class="btn btn-sm approve-candidate" data-id="${candidate.id}" ${available<=0?'disabled':''}>${candidate.status==='Lista de espera'?'Promover':'Aprovar'}</button><button type="button" class="btn btn-sm btn-outline reject-candidate" data-id="${candidate.id}">Rejeitar</button>`:candidate.status==='Aprovado'?`<button type="button" class="btn btn-sm btn-outline withdraw-candidate" data-id="${candidate.id}">Registrar desistência</button>`:'';
+       return [escapeHtml(candidate.nome),escapeHtml(candidate.email),escapeHtml(candidate.cidade||'—'),fmtDate(candidate.data),`<span class="status-pill status-${escapeHtml(String(candidate.status).toLowerCase().replaceAll(' ','-'))}">${escapeHtml(candidate.status)}</span>`,`<div class="inline-actions"><button type="button" class="btn btn-sm btn-outline view-candidate" data-id="${candidate.id}">Visualizar</button>${action}</div>`];
+      });
+      return `<section class="volunteer-opportunity-group"><div class="volunteer-opportunity-heading"><div><h3>${escapeHtml(item.titulo)}</h3><p>${escapeHtml(item.modalidade)} · ${escapeHtml(item.local)} · ${escapeHtml(days)} · ${escapeHtml(item.horarioInicio||'—')}–${escapeHtml(item.horarioFim||'—')}</p></div><div class="volunteer-opportunity-capacity">${approved}/${Number(item.vagas)||0} aprovados · ${available} vagas · ${waiting} em espera</div></div>${rows.length?adminTable(['Voluntário','E-mail','Cidade','Candidatura','Status','Ações'],rows):'<p class="empty volunteer-opportunity-empty">Nenhuma candidatura para esta oportunidade com os filtros selecionados.</p>'}</section>`;
+     }).join('');
+     const organization=ong(project.ongId)?.nome||'ONG não identificada';
+    return `<details class="volunteer-project-group"><summary><span class="volunteer-project-name">${escapeHtml(organization)} · ${escapeHtml(project.titulo)}</span><span class="volunteer-project-progress">${approvedUnique}${goal?` / ${goal}`:''} pessoas únicas aprovadas${goal?' (meta)':''}</span><span class="volunteer-project-statuses">${statusSummary||'<span class="volunteer-summary-status">Sem candidaturas</span>'}</span></summary><div class="volunteer-project-content">${opportunitySections}</div></details>`;
+    }).filter(Boolean);
+    $('#admin-volunteers').innerHTML=projects.length?projects.join(''):'<div class="empty">Nenhum projeto com oportunidades corresponde aos filtros.</div>';
+ $$('.view-candidate').forEach(b=>b.onclick=()=>{const c=candidaturas().find(x=>String(x.id)===b.dataset.id);if(!c)return;const fields=[['Nome',c.nome],['Oportunidade',opportunity(c.oportunidadeId)?.titulo],['ONG',ong(projeto(opportunity(c.oportunidadeId)?.projetoId)?.ongId)?.nome],['Status',c.status],['E-mail',c.email],['Telefone / WhatsApp',c.telefone],['Nascimento',c.nascimento],['Cidade',c.cidade],['Estado',c.estado],['Disponibilidade',c.disponibilidade],['Experiência',c.experiencia],['Habilidades',c.habilidades],['Motivação',c.motivacao],['Data da candidatura',fmtDate(c.data)],['Motivo da rejeição',c.motivoRejeicao],['Motivo da desistência',c.motivoDesistencia],['Tentativa anterior',c.candidaturaAnteriorId]];const logs=history(c);$('#candidate-details').innerHTML=fields.filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>`<div class="detail-field"><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v)}</span></div>`).join('')+`<div class="full"><h3>Histórico de decisões</h3>${logs.length?'<ol class="audit-list">'+logs.map(h=>`<li><strong>${escapeHtml(h.status)}</strong> — ${escapeHtml(fmtDate(h.data))}<div>Responsável: ${escapeHtml(h.responsavel)}</div><div>Justificativa: ${escapeHtml(h.justificativa)}</div><div class="muted">Anterior: ${escapeHtml(h.statusAnterior||'—')}</div></li>`).join('')+'</ol>':'<p class="muted">Nenhuma decisão registrada nesta versão.</p>'}</div>`;open('#candidate-modal');$('#close-candidate-modal').focus()});
+ $$('.approve-candidate,.reject-candidate,.withdraw-candidate').forEach(b=>b.onclick=()=>{
+  const c=candidaturas().find(x=>String(x.id)===b.dataset.id);
+  if(!c)return;
+  const status=b.classList.contains('withdraw-candidate')?'Desistente':b.classList.contains('approve-candidate')?'Aprovado':'Rejeitado';
+  if(status==='Desistente'&&c.status!=='Aprovado')return toast('Somente voluntários aprovados podem registrar desistência.',true);
+  if(status==='Rejeitado'&&!['Pendente','Lista de espera'].includes(c.status))return toast('Esta candidatura não pode mais ser rejeitada.',true);
+  if(status==='Aprovado'&&!['Pendente','Lista de espera'].includes(c.status))return toast('Esta candidatura não está aguardando aprovação.',true);
+  if(status==='Aprovado'&&vagasDisponiveis(opportunity(c.oportunidadeId))<=0)return toast('Não há vagas disponíveis para esta promoção.',true);
+  $('#decision-form').reset();
+  $('#decision-id').value=c.id;
+  $('#decision-status').value=status;
+  $('#decision-title').textContent=status==='Aprovado'?(c.status==='Lista de espera'?'Promover da lista de espera':'Aprovar candidatura'):status==='Desistente'?'Registrar desistência':'Rejeitar candidatura';
+  $('#decision-subtitle').textContent=`${c.nome} — ${opportunity(c.oportunidadeId)?.titulo||'Oportunidade'}`;
+  $('#confirm-decision').textContent=status==='Aprovado'?'Confirmar aprovação':status==='Desistente'?'Confirmar desistência':'Confirmar rejeição';
+  open('#decision-modal');
+  $('#decision-reviewer').focus();
+ });
  };
- $('#decision-form').onsubmit=e=>{e.preventDefault();if(!e.currentTarget.reportValidity())return;const arr=candidaturas(),c=arr.find(x=>String(x.id)===$('#decision-id').value),status=$('#decision-status').value,responsavel=$('#decision-reviewer').value.trim(),justificativa=$('#decision-reason').value.trim();if(c?.status==='Rejeitado')return toast('Esta candidatura foi rejeitada definitivamente e não pode ser alterada.',true);if(!c||!['Aprovado','Rejeitado'].includes(status)||responsavel.length<2||justificativa.length<10)return toast('Preencha o responsável e uma justificativa de pelo menos 10 caracteres.',true);if(c.status===status&&status==='Aprovado')return close('#decision-modal');if(status==='Aprovado'){const o=opportunity(c.oportunidadeId);if(!o||vagasDisponiveis(o)<=0)return toast('Não há vagas disponíveis para esta aprovação.',true);if(arr.some(x=>String(x.id)!==String(c.id)&&Number(x.oportunidadeId)===Number(c.oportunidadeId)&&String(x.email||'').trim().toLowerCase()===String(c.email||'').trim().toLowerCase()&&x.status==='Aprovado'))return toast('Já existe uma candidatura aprovada com este e-mail.',true)}const anterior=c.status;const log={status,statusAnterior:anterior,responsavel,justificativa,data:new Date().toISOString()};c.historico=[...history(c),log];c.status=status;if(status==='Rejeitado')c.motivoRejeicao=justificativa;else delete c.motivoRejeicao;try{store.set('candidaturas',arr)}catch{return toast('Não foi possível salvar a decisão.',true)}close('#decision-modal');refresh();toast(`Candidatura ${status.toLowerCase()} com justificativa registrada.`)};
+ $('#decision-form').onsubmit=e=>{
+  e.preventDefault();
+  if(!e.currentTarget.reportValidity())return;
+  const arr=candidaturas(),c=arr.find(x=>String(x.id)===$('#decision-id').value),status=$('#decision-status').value;
+  const responsavel=$('#decision-reviewer').value.trim(),justificativa=$('#decision-reason').value.trim();
+  if(!c||!['Pendente','Lista de espera','Aprovado'].includes(c.status))return toast('O estado desta candidatura não permite essa decisão.',true);
+  if(!['Aprovado','Rejeitado','Desistente'].includes(status)||responsavel.length<2||justificativa.length<10)return toast('Preencha o responsável e uma justificativa de pelo menos 10 caracteres.',true);
+  if(status==='Desistente'&&c.status!=='Aprovado')return toast('Somente candidaturas aprovadas podem registrar desistência.',true);
+  if(status==='Rejeitado'&&!['Pendente','Lista de espera'].includes(c.status))return toast('Somente candidaturas pendentes ou em espera podem ser rejeitadas.',true);
+  if(status==='Aprovado'){
+   const o=opportunity(c.oportunidadeId);
+   if(!['Pendente','Lista de espera'].includes(c.status)||!o||vagasDisponiveis(o)<=0)return toast('Não há vaga disponível para esta aprovação.',true);
+    if(candidaturaConflitaHorario(c,arr,c.id))return toast('Não é possível aprovar: a agenda se sobrepõe a outra candidatura ativa deste voluntário.',true);
+   if(arr.some(x=>String(x.id)!==String(c.id)&&Number(x.oportunidadeId)===Number(c.oportunidadeId)&&String(x.email||'').trim().toLowerCase()===String(c.email||'').trim().toLowerCase()&&x.status==='Aprovado'))return toast('Já existe uma candidatura aprovada com este e-mail.',true);
+  }
+  const anterior=c.status,timestamp=new Date().toISOString();
+  c.historico=[...history(c),{status,statusAnterior:anterior,responsavel,justificativa,data:timestamp}];
+  c.status=status;
+  if(status==='Rejeitado')c.motivoRejeicao=justificativa;
+  if(status==='Desistente')c.motivoDesistencia=justificativa;
+  if(status==='Aprovado'){
+   delete c.motivoRejeicao;
+   const o=opportunity(c.oportunidadeId),aprovados=arr.filter(x=>Number(x.oportunidadeId)===Number(c.oportunidadeId)&&x.status==='Aprovado').length;
+   if(aprovados>=Number(o.vagas))arr.filter(x=>Number(x.oportunidadeId)===Number(c.oportunidadeId)&&x.status==='Pendente').forEach(x=>{
+    x.status='Lista de espera';
+    x.historico=[...history(x),{status:'Lista de espera',statusAnterior:'Pendente',responsavel,justificativa:'As vagas foram preenchidas; candidatura encaminhada à lista de espera.',data:timestamp}];
+   });
+  }
+  try{store.set('candidaturas',arr)}catch{return toast('Não foi possível salvar a decisão.',true)}
+  close('#decision-modal');
+  refresh();
+  toast(status==='Desistente'?'Desistência registrada; a vaga está disponível para promoção manual.':status==='Rejeitado'?'Candidatura rejeitada com justificativa registrada.':`Candidatura ${anterior==='Lista de espera'?'promovida':'aprovada'} com justificativa registrada.`);
+ };
  $('#close-candidate-modal').onclick=()=>close('#candidate-modal');$('#close-decision').onclick=()=>close('#decision-modal');refresh();
 }
 if(page==='admin-donations'){

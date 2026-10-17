@@ -118,14 +118,17 @@ input.field[type="file"]:disabled::file-selector-button {
 
 /* Detalhes e inscrição diretamente nos cartões de projetos */
 .project-card-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.project-volunteer-summary{margin:10px 0;padding:8px 10px;border:1px solid #cfe8df;border-radius:8px;background:#f0f8f5;color:#176b58;font-size:.8rem;font-weight:700;line-height:1.4}
+.project-volunteer-unavailable{border-color:#dfe6e9;background:#f5f7f8;color:#5d6d78;font-weight:600}
 .project-details-dialog{max-width:740px;width:min(740px,calc(100vw - 32px))}
-.project-details-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0 24px}
+.project-details-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0 24px}
 .project-details-metrics>div{border:1px solid #dbe7e9;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}
 .project-details-metrics strong{font-size:.8rem;color:#557083}
 .project-opportunity{display:flex;justify-content:space-between;align-items:center;gap:16px;border:1px solid #dbe7e9;border-radius:12px;padding:16px;margin:12px 0}
 .project-opportunity p{margin:6px 0;color:#557083;font-size:.9rem}
 .project-opportunity .btn{flex-shrink:0}
 .project-details-bottom{display:flex;justify-content:flex-end;margin-top:18px}
+@media(max-width:800px){.project-details-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.project-details-metrics{grid-template-columns:1fr}.project-opportunity{align-items:stretch;flex-direction:column}.project-card-actions{justify-content:flex-start}}
 
 /* Fluxo de doação em duas etapas nos cartões */
@@ -236,3 +239,45 @@ input.field[type="file"]:disabled::file-selector-button {
 
 /* Imagens ilustrativas locais dos cadastros fictícios */
 .project-cover-image{width:100%;height:100%;object-fit:cover;display:block}
+.status-lista-de-espera{background:#e3efff;color:#234c7a}
+.status-desistente{background:#e7e9ed;color:#495366}
+.project-volunteer-editor{padding:18px;border:1px solid var(--line);border-radius:12px;background:#f8fbfc}
+.project-volunteer-editor h3,.project-volunteer-editor h4{margin:0 0 6px}
+.project-volunteer-editor>.note{margin:0 0 16px}
+.project-volunteer-editor>.form-group{max-width:360px}
+.project-days,.opportunity-days{min-width:0;margin:14px 0;padding:12px 14px;border:1px solid #d8e3e8;border-radius:9px}
+.project-days legend,.opportunity-days legend{padding:0 5px;font-size:.88rem;font-weight:700}
+.project-day-options,.opportunity-days>div{display:flex;flex-wrap:wrap;gap:9px 18px}
+.project-day-options label,.opportunity-days label{display:flex;align-items:center;gap:5px;font-size:.88rem}
+.project-day-options input,.opportunity-days input{accent-color:var(--brand)}
+.project-opportunities{margin-top:18px}
+.project-opportunities-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.project-opportunities-heading p{margin:0;font-size:.86rem}
+.project-opportunity-row{min-width:0;margin:12px 0;padding:14px;border:1px solid #d8e3e8;border-radius:10px;background:#fff}
+.project-opportunity-row legend{padding:0 6px;font-weight:700}
+.project-opportunity-row .form-grid{gap:12px}
+.project-opportunity-row .form-group{min-width:0}
+.opportunity-remove-wrap{display:flex;align-items:end}
+.volunteer-filters{display:grid;grid-template-columns:auto minmax(180px,1fr) auto minmax(180px,1fr) auto minmax(160px,.7fr);align-items:center;gap:10px 12px}
+.volunteer-filters label{font-size:.88rem;font-weight:700}
+.volunteer-filters .field{min-width:0;width:100%}
+.volunteer-project-group{margin:14px 0;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+.volunteer-project-group>summary{display:grid;grid-template-columns:minmax(220px,1fr) auto minmax(240px,1fr) 34px;align-items:center;gap:14px;padding:17px 20px;cursor:pointer;list-style:none;font-weight:700}
+.volunteer-project-group>summary::-webkit-details-marker{display:none}
+.volunteer-project-group>summary::after{content:'⌄';display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#e5f5f0;color:var(--brand);font-size:1.2rem}
+.volunteer-project-group[open]>summary::after{content:'⌃'}
+.volunteer-project-group>summary:focus-visible{outline:3px solid var(--brand);outline-offset:-3px}
+.volunteer-project-name{min-width:0;overflow-wrap:anywhere}
+.volunteer-project-progress{font-size:.83rem;color:#14633c;white-space:nowrap}
+.volunteer-project-statuses{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:6px}
+.volunteer-summary-status{padding:4px 8px;border-radius:999px;background:#eef4f5;color:#49616a;font-size:.72rem;font-weight:650;white-space:nowrap}
+.volunteer-project-content{padding:0 18px 16px}
+.volunteer-opportunity-group{margin:12px 0;padding:14px;border:1px solid #e1e9ec;border-radius:9px;background:#fbfcfd}
+.volunteer-opportunity-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}
+.volunteer-opportunity-heading h3{margin:0;font-size:1rem}
+.volunteer-opportunity-heading p{margin:4px 0 0;color:var(--muted);font-size:.82rem}
+.volunteer-opportunity-capacity{font-size:.82rem;font-weight:700;color:#355c55;text-align:right}
+.volunteer-opportunity-empty{margin:10px 0;padding:12px;background:#f4f7f8;border-radius:7px}
+@media(max-width:900px){.volunteer-filters{grid-template-columns:auto minmax(0,1fr) auto minmax(0,1fr)}.volunteer-project-group>summary{grid-template-columns:minmax(180px,1fr) auto 34px}.volunteer-project-statuses{grid-column:1/-1;justify-content:flex-start}}
+@media(max-width:600px){.volunteer-filters{grid-template-columns:1fr}.volunteer-filters label{margin-top:5px}.volunteer-project-group>summary{grid-template-columns:minmax(0,1fr) 34px;padding:14px}.volunteer-project-progress{grid-column:1}.volunteer-project-statuses{grid-column:1/-1}.volunteer-project-content{padding:0 10px 12px}.volunteer-opportunity-group{padding:10px}.volunteer-opportunity-heading{flex-direction:column}.volunteer-opportunity-capacity{text-align:left}}
+@media(max-width:650px){.project-volunteer-editor{padding:14px}.project-opportunities-heading{align-items:flex-start;flex-direction:column}.project-opportunity-row{padding:10px}}

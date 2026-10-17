@@ -25,14 +25,49 @@ async function loadData(){
       throw new Error('Dados demonstrativos indisponíveis. Verifique assets/js/demo-data.js e data/'+k+'.json.');
     }
   }
+  const removedOpportunities=new Set(store.get('oportunidades_removidas',[]).map(String));
+  data.oportunidades=[...data.oportunidades,...store.get('oportunidades',[])].map(o=>({...o,...(store.get('oportunidades_edicoes',{})[o.id]||{})})).filter(o=>!removedOpportunities.has(String(o.id)));
   data.ongs=[...data.ongs,...store.get('ongs')].map(o=>({...o,...(store.get('ongs_edicoes',{})[o.id]||{})}));
   data.projetos=[...data.projetos,...store.get('projetos')].map(p=>({...p,...(store.get('projetos_edicoes',{})[p.id]||{})}));
 }
 
 function candidaturas(){return store.get('candidaturas',[])}
+function normalizarEmail(value){return String(value||'').trim().toLowerCase()}
+function diasOportunidade(opportunity){
+ if(Array.isArray(opportunity?.diasAtuacao)&&opportunity.diasAtuacao.length)return opportunity.diasAtuacao;
+ const period=String(opportunity?.periodo||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const terms={SEG:['segunda','seg'],TER:['terca','ter'],QUA:['quarta','qua'],QUI:['quinta','qui'],SEX:['sexta','sex'],SAB:['sabado','sab'],DOM:['domingo','dom']};
+ return Object.entries(terms).filter(([,values])=>values.some(value=>period.includes(value))).map(([day])=>day);
+}
+function rotuloDias(dias){const labels={SEG:'Segunda',TER:'Terça',QUA:'Quarta',QUI:'Quinta',SEX:'Sexta',SAB:'Sábado',DOM:'Domingo'};return dias.map(day=>labels[day]||day).join(', ')||'Dias a combinar'}
+function agendaOportunidadeLabel(opportunity){const start=opportunity.horarioInicio,end=opportunity.horarioFim,time=start&&end?`${start}–${end}`:start||end?`${start||'início a combinar'}–${end||'término a combinar'}`:'horário a combinar';return `${rotuloDias(diasOportunidade(opportunity))} · ${time}`}
+function agendaCandidatura(candidate){
+ const opportunity=data.oportunidades.find(item=>Number(item.id)===Number(candidate.oportunidadeId));
+ return {days:Array.isArray(candidate.agendaDias)?candidate.agendaDias:diasOportunidade(opportunity),start:candidate.agendaInicio||opportunity?.horarioInicio||'00:00',end:candidate.agendaFim||opportunity?.horarioFim||'23:59'};
+}
+function agendasConflitam(first,second){
+ if(!first.days.some(day=>second.days.includes(day)))return false;
+ return first.start<second.end&&second.start<first.end;
+}
+function candidaturaConflitaHorario(candidate,arr,excludedId=null){
+ const activeStatuses=['Pendente','Lista de espera','Aprovado'],email=normalizarEmail(candidate.email),schedule=agendaCandidatura(candidate);
+ return arr.some(existing=>{
+  if(String(existing.id)===String(excludedId??candidate.id)||!activeStatuses.includes(existing.status)||normalizarEmail(existing.email)!==email||Number(existing.oportunidadeId)===Number(candidate.oportunidadeId))return false;
+  return agendasConflitam(schedule,agendaCandidatura(existing));
+ });
+}
+function normalizarCnpj(value){return String(value||'').replace(/\D/g,'')}
+function cnpjOcupado(value,ignoredRequestId=null,ignoredOngId=null){
+ const cnpj=normalizarCnpj(value);
+ if(!cnpj)return false;
+ const registered=(data.ongs||[]).some(o=>normalizarCnpj(o.cnpj)===cnpj&&String(o.id)!==String(ignoredOngId||''));
+ const requested=store.get('solicitacoes_ongs',[]).some(r=>normalizarCnpj(r.cnpj)===cnpj&&r.status!=='Rejeitado'&&String(r.id)!==String(ignoredRequestId||'')&&(ignoredOngId===null||String(r.ongId||'')!==String(ignoredOngId)));
+ return registered||requested;
+}
 function aprovadosOportunidade(id){return candidaturas().filter(c=>Number(c.oportunidadeId)===Number(id)&&c.status==='Aprovado').length}
 function vagasDisponiveis(o){return Math.max(0,Number(o.vagas)-aprovadosOportunidade(o.id))}
-function candidaturaDuplicada(c,arr){return arr.some(x=>Number(x.oportunidadeId)===Number(c.oportunidadeId)&&String(x.email||'').trim().toLowerCase()===String(c.email||'').trim().toLowerCase()&&['Pendente','Aprovado'].includes(x.status))}
+function candidaturasEmEspera(id){return candidaturas().filter(c=>Number(c.oportunidadeId)===Number(id)&&c.status==='Lista de espera').length}
+function candidaturaDuplicada(c,arr){return arr.some(x=>Number(x.oportunidadeId)===Number(c.oportunidadeId)&&String(x.email||'').trim().toLowerCase()===String(c.email||'').trim().toLowerCase()&&['Pendente','Lista de espera','Aprovado'].includes(x.status))}
 function ong(id){return data.ongs.find(x=>x.id===Number(id))}function projeto(id){return data.projetos.find(x=>x.id===Number(id))}
 // A arrecadação inicial é mantida nos projetos JSON; doações locais são somadas apenas uma vez.
 function totalDoacoesProjeto(id){return store.get('doacoes',[]).filter(d=>Number(d.projetoId)===Number(id)&&d.status==='Simulada').reduce((sum,d)=>sum+(Number(d.valor)||0),0)}
@@ -45,9 +80,15 @@ function demoImagePath(value){
  return '';
 }
 function projectVisual(p){const src=demoImagePath(p.imagem);return src?`<img class="project-cover-image" src="${src}" alt="Ilustração do projeto ${escapeHtml(p.titulo)}" loading="lazy">`:escapeHtml(p.emoji||'🤝')}
-function projectCard(p){return `<article class="card"><div class="card-visual" aria-hidden="true">${projectVisual(p)}</div><div class="card-body"><span class="badge">${escapeHtml(p.categoria)}</span><h3>${escapeHtml(p.titulo)}</h3><p>${escapeHtml(p.descricao)}</p><div class="small muted">${escapeHtml(ong(p.ongId)?.nome||'ONG')}</div><div class="progress" role="progressbar" aria-label="Progresso da arrecadação" aria-valuenow="${pct(p)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct(p)}%"></span></div><div class="small muted">${money(arrecadadoProjeto(p))} de ${money(p.meta)}</div><div class="card-footer"><span class="small">${p.voluntarios||0} voluntários</span><div class="project-card-actions"><button type="button" class="btn btn-sm btn-outline project-details-open" data-project-id="${escapeHtml(p.id)}">Conhecer projeto</button><button type="button" class="btn btn-sm donation-open" data-project-id="${escapeHtml(p.id)}">Apoiar</button></div></div></div></article>`}
+function volunteerAvailabilitySummary(project){
+ const items=opportunitiesForProject(project.id);
+ if(!items.length)return '<div class="project-volunteer-summary project-volunteer-unavailable">Voluntariado ainda não aberto neste projeto</div>';
+ const available=items.reduce((sum,item)=>sum+vagasDisponiveis(item),0);
+ return `<div class="project-volunteer-summary">${items.length} ${items.length===1?'oportunidade':'oportunidades'} · ${available} ${available===1?'vaga disponível':'vagas disponíveis'}${available===0?' · inscrições na lista de espera':''}</div>`;
+}
+function projectCard(p){const volunteers=p.voluntariosNecessarios!==undefined?`${Number(p.voluntariosNecessarios)||0} voluntários necessários`:`${p.voluntarios||0} participações (exemplo)`;return `<article class="card"><div class="card-visual" aria-hidden="true">${projectVisual(p)}</div><div class="card-body"><span class="badge">${escapeHtml(p.categoria)}</span><h3>${escapeHtml(p.titulo)}</h3><p>${escapeHtml(p.descricao)}</p><div class="small muted">${escapeHtml(ong(p.ongId)?.nome||'ONG')}</div>${volunteerAvailabilitySummary(p)}<div class="progress" role="progressbar" aria-label="Progresso da arrecadação" aria-valuenow="${pct(p)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct(p)}%"></span></div><div class="small muted">${money(arrecadadoProjeto(p))} de ${money(p.meta)}</div><div class="card-footer"><span class="small">${escapeHtml(volunteers)}</span><div class="project-card-actions"><button type="button" class="btn btn-sm btn-outline project-details-open" data-project-id="${escapeHtml(p.id)}">${opportunitiesForProject(p.id).length?'Ver oportunidades':'Conhecer projeto'}</button><button type="button" class="btn btn-sm donation-open" data-project-id="${escapeHtml(p.id)}">Apoiar</button></div></div></div></article>`}
 // Cartão resumido exclusivo da página inicial: sem arrecadação ou botão Apoiar.
-function homeProjectCard(p){return `<article class="card home-project-card"><div class="card-visual" aria-hidden="true">${projectVisual(p)}</div><div class="card-body"><span class="badge">${escapeHtml(p.categoria)}</span><h3>${escapeHtml(p.titulo)}</h3><p class="home-project-description">${escapeHtml(p.descricao)}</p><div class="small muted home-project-ong">${escapeHtml(ong(p.ongId)?.nome||'ONG responsável')}</div><button type="button" class="btn btn-sm project-details-open home-project-button" data-project-id="${escapeHtml(p.id)}">Conhecer projeto</button></div></article>`}
+function homeProjectCard(p){return `<article class="card home-project-card"><div class="card-visual" aria-hidden="true">${projectVisual(p)}</div><div class="card-body"><span class="badge">${escapeHtml(p.categoria)}</span><h3>${escapeHtml(p.titulo)}</h3><p class="home-project-description">${escapeHtml(p.descricao)}</p><div class="small muted home-project-ong">${escapeHtml(ong(p.ongId)?.nome||'ONG responsável')}</div>${volunteerAvailabilitySummary(p)}<button type="button" class="btn btn-sm project-details-open home-project-button" data-project-id="${escapeHtml(p.id)}">${opportunitiesForProject(p.id).length?'Ver oportunidades':'Conhecer projeto'}</button></div></article>`}
 function recentProjects(){return [...data.projetos].map((p,index)=>({p,index})).sort((a,b)=>{const ta=Date.parse(a.p.criadoEm||a.p.dataCriacao||a.p.createdAt||'');const tb=Date.parse(b.p.criadoEm||b.p.dataCriacao||b.p.createdAt||'');return (Number.isFinite(tb)?tb:0)-(Number.isFinite(ta)?ta:0)||b.index-a.index}).slice(0,6).map(x=>x.p)}
 function updateHomeCarouselControls(){document.querySelectorAll('.home-carousel').forEach(carousel=>{const track=carousel.querySelector('.home-carousel-track');const max=Math.max(0,track.scrollWidth-track.clientWidth);carousel.querySelectorAll('.home-carousel-arrow').forEach(btn=>{btn.disabled=btn.dataset.direction==='prev'?track.scrollLeft<=2:track.scrollLeft>=max-2})})}
 function initHomeCarousels(){document.querySelectorAll('.home-carousel').forEach(carousel=>{const track=carousel.querySelector('.home-carousel-track');carousel.addEventListener('click',e=>{const btn=e.target.closest('.home-carousel-arrow');if(!btn)return;const card=track.querySelector('.card');const gap=parseFloat(getComputedStyle(track).columnGap)||22;const distance=card?card.getBoundingClientRect().width+gap:track.clientWidth;track.scrollBy({left:distance*(btn.dataset.direction==='next'?1:-1),behavior:'smooth'})});track.addEventListener('scroll',updateHomeCarouselControls,{passive:true})});window.addEventListener('resize',updateHomeCarouselControls)}
@@ -71,7 +112,7 @@ function ensureProjectDetailsModal(){
 function openProjectDetails(id){const p=data.projetos.find(x=>String(x.id)===String(id));if(!p)return;ensureProjectDetailsModal();selectedProjectDetails=p;projectModalPreviousFocus=document.activeElement;
  $('#project-details-title').textContent=p.titulo;$('#project-details-category').textContent=p.categoria||'Projeto';$('#project-details-ong').textContent=ong(p.ongId)?.nome||'ONG responsável';
  const ops=opportunitiesForProject(p.id);
- $('#project-details-content').innerHTML=`<h3>Sobre o projeto</h3><p>${escapeHtml(p.descricao||'Descrição não informada.')}</p><div class="project-details-metrics"><div><strong>Meta de arrecadação</strong><span>${money(p.meta)}</span></div><div><strong>Arrecadado (simulado)</strong><span>${money(arrecadadoProjeto(p))}</span></div><div><strong>Oportunidades</strong><span>${ops.length}</span></div></div><h3>Voluntariado</h3>${ops.length?ops.map(o=>{const livres=vagasDisponiveis(o);return `<div class="project-opportunity"><div><strong>${escapeHtml(o.titulo)}</strong><p>${escapeHtml(o.modalidade)} · ${escapeHtml(o.local)} · ${escapeHtml(o.periodo)}</p><p>${livres} ${livres===1?'vaga disponível':'vagas disponíveis'} de ${Number(o.vagas)||0} · ${aprovadosOportunidade(o.id)} aprovadas</p></div><button type="button" class="btn btn-sm" data-apply-opportunity="${escapeHtml(o.id)}" ${livres===0?'disabled':''}>${livres===0?'Vagas esgotadas':'Inscrever-se como voluntário'}</button></div>`}).join(''):'<p>Este projeto ainda não possui oportunidades de voluntariado cadastradas.</p>'}<div class="project-details-bottom"><button type="button" class="btn btn-outline donation-open" data-project-id="${escapeHtml(p.id)}">Apoiar projeto</button></div>`;
+ $('#project-details-content').innerHTML=`<h3>Sobre o projeto</h3><p>${escapeHtml(p.descricao||'Descrição não informada.')}</p><div class="project-details-metrics"><div><strong>Meta de arrecadação</strong><span>${money(p.meta)}</span></div><div><strong>Arrecadado (simulado)</strong><span>${money(arrecadadoProjeto(p))}</span></div><div><strong>Voluntários necessários</strong><span>${p.voluntariosNecessarios===undefined?'Não informado':Number(p.voluntariosNecessarios)||0}</span></div><div><strong>Oportunidades</strong><span>${ops.length}</span></div></div><h3>Voluntariado</h3>${ops.length?ops.map(o=>{const livres=vagasDisponiveis(o),espera=candidaturasEmEspera(o.id),details=[o.modalidade,o.local,o.periodo].filter(Boolean).join(' · ');return `<div class="project-opportunity"><div><strong>${escapeHtml(o.titulo)}</strong><p>${escapeHtml(details)}</p><p>${escapeHtml(agendaOportunidadeLabel(o))}</p><p>${livres} ${livres===1?'vaga disponível':'vagas disponíveis'} de ${Number(o.vagas)||0} · ${aprovadosOportunidade(o.id)} aprovadas · ${espera} na lista de espera</p></div><button type="button" class="btn btn-sm" data-apply-opportunity="${escapeHtml(o.id)}">${livres===0?'Entrar na lista de espera':'Inscrever-se como voluntário'}</button></div>`}).join(''):'<p>Este projeto ainda não possui oportunidades de voluntariado cadastradas.</p>'}<div class="project-details-bottom"><button type="button" class="btn btn-outline donation-open" data-project-id="${escapeHtml(p.id)}">Apoiar projeto</button></div>`;
  $('#project-details-modal').hidden=false;document.body.classList.add('modal-open');$('#project-details-close').focus();
 }
 function closeProjectDetails(restore=true){const overlay=$('#project-details-modal');if(!overlay)return;overlay.hidden=true;document.body.classList.remove('modal-open');if(restore)projectModalPreviousFocus?.focus()}
@@ -121,7 +162,16 @@ function render(){const page=document.body.dataset.page;const target=$('#content
  requestAnimationFrame(updateHomeCarouselControls);return}if(!target)return;
 if(page==='ongs'){target.innerHTML=data.ongs.map(ongCard).join('');return}
 if(page==='projetos'){const q=($('#search')?.value||'').toLowerCase(),cat=$('#category')?.value||'',oid=Number($('#ong-filter')?.value||0);const items=data.projetos.filter(p=>(!oid||p.ongId===oid)&&(!cat||p.categoria===cat)&&(`${p.titulo} ${p.descricao} ${ong(p.ongId)?.nome}`.toLowerCase().includes(q)));target.innerHTML=items.length?items.map(projectCard).join(''):'<div class="empty">Nenhum projeto encontrado.</div>';return}
-if(page==='voluntariado'){const q=($('#search')?.value||'').toLowerCase();const items=data.oportunidades.filter(o=>`${o.titulo} ${o.local} ${o.modalidade}`.toLowerCase().includes(q));target.innerHTML=items.map(o=>{const livres=vagasDisponiveis(o),ocupadas=aprovadosOportunidade(o.id);return `<article class="card"><div class="card-body"><span class="badge">${escapeHtml(o.modalidade)}</span><h3>${escapeHtml(o.titulo)}</h3><p>${escapeHtml(projeto(o.projetoId)?.titulo)}</p><div class="small muted">📍 ${escapeHtml(o.local)} · ${escapeHtml(o.periodo)} · <strong>${livres} ${livres===1?'vaga disponível':'vagas disponíveis'}</strong> de ${o.vagas}</div><div class="small muted">${ocupadas} ${ocupadas===1?'candidatura aprovada':'candidaturas aprovadas'}</div><div class="card-footer"><span class="small">${escapeHtml(ong(projeto(o.projetoId)?.ongId)?.nome)}</span><button class="btn btn-sm apply" data-id="${o.id}" ${livres===0?'disabled':''}>${livres===0?'Vagas esgotadas':'Candidatar-se'}</button></div></div></article>`}).join('')||'<div class="empty">Nenhuma oportunidade encontrada.</div>';$$('.apply').forEach(b=>b.onclick=()=>openVolunteerModal(Number(b.dataset.id)));return}
+if(page==='voluntariado'){
+ const q=($('#search')?.value||'').toLowerCase();
+ const items=data.oportunidades.filter(o=>`${o.titulo} ${o.local} ${o.modalidade}`.toLowerCase().includes(q));
+ target.innerHTML=items.map(o=>{
+  const livres=vagasDisponiveis(o),ocupadas=aprovadosOportunidade(o.id),espera=candidaturasEmEspera(o.id);
+  return `<article class="card"><div class="card-body"><span class="badge">${escapeHtml(o.modalidade)}</span><h3>${escapeHtml(o.titulo)}</h3><p>${escapeHtml(projeto(o.projetoId)?.titulo)}</p><div class="small muted">📍 ${escapeHtml(o.local)} · ${escapeHtml(o.periodo)} · <strong>${livres} ${livres===1?'vaga disponível':'vagas disponíveis'}</strong> de ${o.vagas}</div><div class="small muted">${ocupadas} ${ocupadas===1?'candidatura aprovada':'candidaturas aprovadas'} · ${espera} ${espera===1?'pessoa na lista de espera':'pessoas na lista de espera'}</div><div class="card-footer"><span class="small">${escapeHtml(ong(projeto(o.projetoId)?.ongId)?.nome)}</span><button class="btn btn-sm apply" data-id="${o.id}">${livres===0?'Entrar na lista de espera':'Candidatar-se'}</button></div></div></article>`
+ }).join('')||'<div class="empty">Nenhuma oportunidade encontrada.</div>';
+ $$('.apply').forEach(b=>b.onclick=()=>openVolunteerModal(Number(b.dataset.id)));
+ return
+}
 if(page==='campanhas'){
  const selected=Number(new URLSearchParams(location.search).get('projeto')||0);
  target.innerHTML=data.projetos.filter(p=>!selected||p.id===selected).map(p=>`<article class="card"><div class="card-body"><span class="badge">${escapeHtml(ong(p.ongId)?.nome)}</span><h3>${escapeHtml(p.titulo)}</h3><p>${escapeHtml(p.descricao)}</p><div class="progress"><span style="width:${pct(p)}%"></span></div><div class="small muted">${money(arrecadadoProjeto(p))} arrecadados · Meta ${money(p.meta)}</div><form class="donation-form" data-id="${p.id}"><div class="form-group"><label for="donation-amount-${p.id}">Escolha o valor da contribuição simulada</label><select class="field donation-amount-select" id="donation-amount-${p.id}"><option value="5">R$ 5,00</option><option value="10">R$ 10,00</option><option value="25" selected>R$ 25,00</option><option value="50">R$ 50,00</option><option value="100">R$ 100,00</option><option value="other">Outro valor</option></select></div><div class="form-group donation-other" hidden><label for="amount-${p.id}">Outro valor (R$)</label><input id="amount-${p.id}" class="field" type="number" min="0.01" max="100000" step="0.01" placeholder="Digite o valor"></div><button class="btn btn-sm" type="submit" style="margin-top:12px">Simular doação</button></form></div></article>`).join('');
@@ -149,7 +199,7 @@ function renderDashboard(){const chosen=Number($('#ong-select')?.value||1),items
 
 let previousModalFocus=null;let selectedOpportunityId=null;
 function closeVolunteerModal(){const overlay=$('#volunteer-modal');if(!overlay)return;overlay.hidden=true;document.body.classList.remove('modal-open');previousModalFocus?.focus();}
-function openVolunteerModal(id){const opportunity=data.oportunidades.find(o=>o.id===id);if(!opportunity)return;if(vagasDisponiveis(opportunity)===0){toast("As vagas desta oportunidade estão esgotadas.",true);render();return}selectedOpportunityId=id;previousModalFocus=document.activeElement;const form=$('#volunteer-form');form.reset();$('#volunteer-success').hidden=true;form.hidden=false;$('#selected-opportunity-title').textContent=opportunity.titulo;$('#selected-opportunity-ong').textContent=ong(projeto(opportunity.projetoId)?.ongId)?.nome||'ONG';$('#volunteer-modal').hidden=false;document.body.classList.add('modal-open');$('#vol-name').focus();}
+function openVolunteerModal(id){const opportunity=data.oportunidades.find(o=>o.id===id);if(!opportunity)return;selectedOpportunityId=id;previousModalFocus=document.activeElement;const form=$('#volunteer-form');form.reset();$('#volunteer-success').hidden=true;form.hidden=false;$('#selected-opportunity-title').textContent=opportunity.titulo;$('#selected-opportunity-ong').textContent=ong(projeto(opportunity.projetoId)?.ongId)?.nome||'ONG';const aguardando=vagasDisponiveis(opportunity)===0;$('#volunteer-modal').querySelector('.modal-note').textContent=aguardando?'As vagas estão preenchidas. Sua inscrição ficará na lista de espera para análise manual.':'Sua inscrição será analisada pela organização responsável.';$('#volunteer-modal').hidden=false;document.body.classList.add('modal-open');$('#vol-name').focus();}
 function initVolunteerModal(){const overlay=$('#volunteer-modal');if(!overlay)return;const states=['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];$('#vol-state').insertAdjacentHTML('beforeend',states.map(x=>`<option value="${x}">${x}</option>`).join(''));['#close-volunteer-modal','#finish-volunteer-modal'].forEach(sel=>$(sel).addEventListener('click',closeVolunteerModal));overlay.addEventListener('click',e=>{});overlay.addEventListener('keydown',e=>{if(e.key==='Tab'){const els=[...overlay.querySelectorAll('button:not([hidden]),input:not([hidden]),select:not([hidden]),textarea:not([hidden])')].filter(x=>x.getClientRects().length);if(!els.length)return;const first=els[0],last=els.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});$('#volunteer-form').addEventListener('submit',e=>{e.preventDefault();const form=e.currentTarget;if(!form.reportValidity())return;const values=Object.fromEntries(new FormData(form).entries());const birth=new Date(values.nascimento+'T12:00:00');if(Number.isNaN(birth.getTime())||birth>new Date()){toast('Informe uma data de nascimento válida.',true);return}const arr=candidaturas();if(vagasDisponiveis(data.oportunidades.find(o=>o.id===selectedOpportunityId))===0){closeVolunteerModal();render();toast('As vagas foram preenchidas.',true);return}const candidate={id:Date.now(),oportunidadeId:selectedOpportunityId,nome:values.nome.trim(),email:values.email.trim(),telefone:values.telefone.trim(),nascimento:values.nascimento,cidade:values.cidade.trim(),estado:values.estado,disponibilidade:values.disponibilidade,experiencia:values.experiencia,habilidades:(values.habilidades||'').trim(),motivacao:values.motivacao.trim(),consentimento:true,data:new Date().toISOString(),status:'Pendente'};if(candidaturaDuplicada(candidate,arr)){toast('Já existe uma candidatura pendente ou aprovada com este e-mail para esta oportunidade.',true);return}arr.push(candidate);try{store.set('candidaturas',arr)}catch(err){toast('Não foi possível salvar no navegador.',true);return}closeVolunteerModal();render();successNotice('Inscrição enviada com sucesso! Sua candidatura está pendente de análise.')})}
 let pendingDonation=null,previousDonationFocus=null;
 function closeDonationModal(){const overlay=$('#donation-modal');if(!overlay)return;overlay.hidden=true;document.body.classList.remove('modal-open');$('#donation-billing-form').reset();pendingDonation=null;previousDonationFocus?.focus()}
@@ -166,4 +216,51 @@ function initDonationModal(){const overlay=$('#donation-modal');if(!overlay)retu
 
 function initOngRequest(){const modal=$('#request-ong-modal'),open=$('#request-ong-open');if(!modal||!open)return;let prior=null;const close=()=>{modal.hidden=true;if(!document.querySelector('.modal-overlay:not([hidden])'))document.body.classList.remove('modal-open');prior?.focus()};open.addEventListener('click',()=>{prior=document.activeElement;$('#request-ong-form').reset();$('#request-cnpj').setCustomValidity('');$('#request-ong-form').hidden=false;$('#request-ong-success').hidden=true;modal.hidden=false;document.body.classList.add('modal-open');$('#request-name').focus()});$('#request-ong-close').addEventListener('click',close);$('#request-ong-finish').addEventListener('click',close);modal.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const items=[...modal.querySelectorAll('button,input,textarea')].filter(el=>el.getClientRects().length&&!el.disabled);if(!items.length)return;const first=items[0],last=items.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}});$('#request-cnpj').addEventListener('input',e=>{const field=e.currentTarget;field.setCustomValidity('');field.removeAttribute('aria-invalid')});$('#request-ong-form').addEventListener('submit',e=>{e.preventDefault();const form=e.currentTarget;if(!form.reportValidity())return;const values=Object.fromEntries(new FormData(form).entries());const cnpj=String(values.cnpj||'').replace(/\D/g,'');if(cnpj.length!==14){const field=$('#request-cnpj');field.setCustomValidity('O CNPJ deve conter exatamente 14 dígitos. Você informou '+cnpj.length+'.');field.reportValidity();field.focus();toast('CNPJ incompleto: informe os 14 dígitos antes de enviar.',true);return}const arr=store.get('solicitacoes_ongs',[]);if(arr.some(r=>r.cnpj===cnpj&&r.status==='Pendente')){toast('Já existe uma solicitação pendente para este CNPJ neste navegador.',true);return}arr.push({id:Date.now(),nome:values.nome.trim(),cnpj,cidade:values.cidade.trim(),responsavel:values.responsavel.trim(),email:values.email.trim(),telefone:values.telefone.trim(),descricao:values.descricao.trim(),data:new Date().toISOString(),status:'Pendente',consentimento:true,historico:[]});try{store.set('solicitacoes_ongs',arr)}catch{toast('Não foi possível salvar a solicitação neste navegador.',true);return}close();successNotice('Solicitação de cadastro enviada com sucesso! Aguarde a análise administrativa.')})}
 function init(){initOngRequest();initHomeCarousels();initMenu();initOngDetails();initProjectDetails();initVolunteerModal();initDonationModal();loadData().then(()=>{if($('#category')){const cats=[...new Set(data.projetos.map(p=>p.categoria))].sort();$('#category').innerHTML='<option value="">Todas as categorias</option>'+cats.map(c=>`<option>${escapeHtml(c)}</option>`).join('')}if($('#ong-filter')){const sel=$('#ong-filter');sel.innerHTML='<option value="">Todas as ONGs</option>'+data.ongs.map(o=>`<option value="${escapeHtml(o.id)}">${escapeHtml(o.nome)}</option>`).join('');const requested=new URLSearchParams(location.search).get('ong');if(requested&&data.ongs.some(o=>String(o.id)===requested))sel.value=requested;sel.addEventListener('change',()=>{const url=new URL(location.href);if(sel.value)url.searchParams.set('ong',sel.value);else url.searchParams.delete('ong');history.replaceState(null,'',url)})}if($('#ong-select'))$('#ong-select').innerHTML=data.ongs.map(o=>`<option value="${o.id}">${escapeHtml(o.nome)}</option>`).join('');render();$$('#search,#category,#ong-filter,#ong-select').forEach(el=>el.addEventListener(el.id==='search'?'input':'change',render));}).catch(showError);const contact=$('#contact-form');if(contact)contact.addEventListener('submit',e=>{e.preventDefault();if(!contact.reportValidity())return;toast('Mensagem de demonstração recebida. Não foi enviada para nenhum servidor.');contact.reset()});const login=$('#login-form');if(login)login.addEventListener('submit',e=>{e.preventDefault();toast('Acesso de demonstração: utilize o painel administrativo. Não existe autenticação real nesta versão.');});}
+function handleVolunteerSubmission(event){
+ const form=event.target;
+ if(form?.id!=='volunteer-form')return;
+ event.preventDefault();
+ event.stopImmediatePropagation();
+ if(!form.reportValidity())return;
+ const values=Object.fromEntries(new FormData(form).entries());
+ const birth=new Date(values.nascimento+'T12:00:00');
+ if(Number.isNaN(birth.getTime())||birth>new Date()){toast('Informe uma data de nascimento válida.',true);return}
+ const arr=candidaturas(),opportunity=data.oportunidades.find(o=>Number(o.id)===Number(selectedOpportunityId));
+ if(!opportunity)return toast('Oportunidade indisponível.',true);
+ const timestamp=new Date().toISOString();
+ const schedule=agendaCandidatura({oportunidadeId:opportunity.id});
+ const candidate={id:Date.now(),oportunidadeId:selectedOpportunityId,nome:values.nome.trim(),email:values.email.trim(),telefone:values.telefone.trim(),nascimento:values.nascimento,cidade:values.cidade.trim(),estado:values.estado,disponibilidade:values.disponibilidade,experiencia:values.experiencia,habilidades:(values.habilidades||'').trim(),motivacao:values.motivacao.trim(),consentimento:true,data:timestamp,status:vagasDisponiveis(opportunity)>0?'Pendente':'Lista de espera',agendaDias:schedule.days,agendaInicio:schedule.start,agendaFim:schedule.end};
+ if(candidaturaDuplicada(candidate,arr)){toast('Já existe uma candidatura ativa com este e-mail para esta oportunidade.',true);return}
+ if(candidaturaConflitaHorario(candidate,arr)){toast('Você já possui uma candidatura ativa em dias e horários que se sobrepõem.',true);return}
+ const anterior=arr.filter(x=>Number(x.oportunidadeId)===Number(candidate.oportunidadeId)&&String(x.email||'').trim().toLowerCase()===candidate.email.toLowerCase()&&x.status==='Rejeitado').sort((a,b)=>new Date(b.data||0)-new Date(a.data||0))[0];
+ if(anterior)candidate.candidaturaAnteriorId=anterior.id;
+ candidate.historico=[{status:candidate.status,statusAnterior:'',responsavel:'Sistema',justificativa:'Inscrição recebida.',data:timestamp}];
+ arr.push(candidate);
+ try{store.set('candidaturas',arr)}catch{toast('Não foi possível salvar no navegador.',true);return}
+ closeVolunteerModal();
+ render();
+ successNotice(candidate.status==='Pendente'?'Inscrição enviada e registrada, aguardando análise.':'Inscrição registrada na lista de espera para análise manual.');
+}
+document.addEventListener('submit',handleVolunteerSubmission,true);
+document.addEventListener('submit',event=>{
+ const form=event.target;
+ if(form?.id!=='request-ong-form')return;
+ const field=form.elements.namedItem('cnpj'),cnpj=normalizarCnpj(field.value);
+ if(cnpj.length===14&&cnpjOcupado(cnpj)){
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  field.setCustomValidity('Já existe uma solicitação em andamento ou uma ONG cadastrada com este CNPJ.');
+  field.reportValidity();
+  toast('Este CNPJ já está associado a uma solicitação ativa ou ONG cadastrada.',true);
+ }
+},true);
+document.addEventListener('submit',event=>{
+ if(event.target?.id!=='request-ong-form')return;
+ const cnpj=normalizarCnpj(event.target.elements.namedItem('cnpj').value),requests=store.get('solicitacoes_ongs',[]);
+ const anteriores=requests.filter(r=>normalizarCnpj(r.cnpj)===cnpj&&r.status==='Rejeitado').sort((a,b)=>new Date(b.data||0)-new Date(a.data||0));
+ const nova=requests.filter(r=>normalizarCnpj(r.cnpj)===cnpj&&r.status==='Pendente').sort((a,b)=>new Date(b.data||0)-new Date(a.data||0))[0];
+ if(!anteriores.length||!nova)return;
+ nova.solicitacaoAnteriorId=anteriores[0].id;
+ try{store.set('solicitacoes_ongs',requests)}catch{toast('Solicitação criada, mas não foi possível vincular o histórico anterior.',true)}
+});
 document.addEventListener('DOMContentLoaded',init);

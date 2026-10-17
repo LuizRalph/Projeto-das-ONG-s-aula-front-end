@@ -26,6 +26,20 @@ Abra a pasta raiz pelo Live Server; use dados fictícios. Evite limpar o armazen
 | T18 | Recarregar páginas | Persistência local preservada |
 | T19 | Abrir em outro navegador | Registros locais não são compartilhados |
 | T20 | Testar largura móvel | Layout legível e controles acessíveis |
+| T21 | Enviar candidatura com oportunidade lotada | Inscrição aceita como `Lista de espera`; vaga não ocupada |
+| T22 | Aprovar a última vaga com candidaturas pendentes | Aprovada ocupa vaga; pendentes restantes entram na fila com histórico |
+| T23 | Registrar desistência e promover alguém da fila | Desistência libera capacidade; promoção manual ocupa uma vaga |
+| T24 | Rejeitar e reinscrever o mesmo e-mail/oportunidade | Tentativa rejeitada preservada; nova candidatura vinculada |
+| T25 | Repetir candidatura ativa para o mesmo e-mail/oportunidade | Envio duplicado bloqueado |
+| T26 | Enviar CNPJ com solicitação ativa ou ONG publicada | Duplicidade bloqueada na solicitação e na publicação |
+| T27 | Enviar novo pedido após rejeição | Pedido aceito com `solicitacaoAnteriorId` |
+| T28 | Editar a própria ONG ou concluir o próprio pedido | CNPJ atual aceito; outros registros ativos continuam bloqueando |
+| T29 | Criar projeto com meta de 15 e duas oportunidades | Meta, dias padrão, vagas e horários persistem ao reabrir edição |
+| T30 | Candidatar o mesmo e-mail em dias distintos | Ambas candidaturas ativas são aceitas |
+| T31 | Candidatar o mesmo e-mail em horários sobrepostos | Segunda inscrição ativa é bloqueada |
+| T32 | Candidatar em turnos adjacentes | Horário final igual ao início seguinte é aceito |
+| T33 | Aprovar após surgir conflito de agenda | Aprovação bloqueada e candidatura permanece pendente |
+| T34 | Filtrar voluntários por projeto/status | Acordeões e candidaturas correspondem aos filtros; oportunidades vazias mostram estado vazio |
 
 ## Sequência para apresentação (10–15 minutos)
 1. Explicar objetivo e arquitetura (2 min).
