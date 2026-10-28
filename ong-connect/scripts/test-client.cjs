@@ -9,10 +9,12 @@ async function run(){
     const calls=[];
     const catalog={ongs:[{id:1,nome:'ONG remota'}],projetos:[],oportunidades:[]};
     const context=vm.createContext({
-      document:{addEventListener(){}},location:{pathname},URLSearchParams,
+      document:{body:{dataset:{}},addEventListener(){}},window:{},location:{pathname},URLSearchParams,
       localStorage:{getItem(){throw Error('O catálogo não deve consultar o navegador.')}},
       fetch:async(url,options)=>{
         if(url.endsWith('data/demo-registrations.json'))return{ok:false};
+        if(url.endsWith('resource=sessao'))return{ok:true,json:async()=>({usuario:{id:1,perfil:'admin'},csrf:'token-de-teste'})};
+        for(const resource of ['candidaturas','doacoes'])if(url.includes('resource='+resource))return{ok:true,json:async()=>({[resource]:[],pagination:{total:0}})};
         calls.push({url,options});return{ok:true,json:async()=>catalog}
       }
     });
@@ -24,6 +26,7 @@ async function run(){
     await vm.runInContext("apiRequest('publicar','POST',{nome:'ONG'},42)",context);
     assert.match(calls[1].url,/resource=publicar&id=42$/);
     assert.equal(calls[1].options.method,'POST');
+    assert.equal(calls[1].options.headers['X-CSRF-Token'],'token-de-teste');
     assert.equal(JSON.parse(calls[1].options.body).nome,'ONG');
     context.fetch=async()=>({ok:true,json:async()=>({ongs:[]})});
     await assert.rejects(vm.runInContext('loadData()',context),/catálogo.*incompleto/);

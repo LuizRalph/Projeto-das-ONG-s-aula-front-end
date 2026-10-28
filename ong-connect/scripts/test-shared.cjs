@@ -1,7 +1,12 @@
 /* Servidores independentes permitem concorrência real no Windows. Banco novo a cada execução. */
 const {spawn,execFileSync}=require('child_process');const fs=require('fs');const assert=require('assert/strict');const path=require('path');
-const root=path.resolve(__dirname,'..'),php=process.env.PHP_BINARY||path.join(root,'.runtime/php/php.exe');
-const args=['-n','-d','extension_dir='+path.join(root,'.runtime/php/ext'),'-d','extension=pdo_mysql','-d','extension=mbstring','-d','extension=fileinfo'];
+const root=path.resolve(__dirname,'..');
+const portablePhp=path.join(root,'.runtime/php/php.exe');
+const usePortable=!process.env.PHP_BINARY&&process.platform==='win32'&&fs.existsSync(portablePhp);
+const php=process.env.PHP_BINARY||(usePortable?portablePhp:'php');
+// O PHP instalado usa seu próprio php.ini; somente o portátil recebe extensões locais.
+const args=usePortable?['-n','-d','extension_dir='+path.join(root,'.runtime/php/ext'),'-d','extension=pdo_mysql','-d','extension=mbstring','-d','extension=fileinfo']:[];
+fs.mkdirSync(path.join(root,'.runtime'),{recursive:true});
 const env={...process.env,DB_DATABASE:'ong_connect_test_'+Date.now()};const servers=[];let passed=0;
 const run=(file,extra=[])=>execFileSync(php,[...args,file,...extra],{cwd:root,env,encoding:'utf8'});
 const ports=[18081,18082];

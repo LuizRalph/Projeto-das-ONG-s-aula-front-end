@@ -1,0 +1,4 @@
+# Ferramentas opcionais para gerar PDFs e validar diagramas.
+Markdown==3.11.2
+reportlab==5.1.0
+PyMuPDF==1.26.5
