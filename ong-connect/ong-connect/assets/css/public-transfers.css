@@ -1,0 +1,10 @@
+.public-transfers-page{padding-top:24px;padding-bottom:32px}
+.public-transfers-page fieldset{border:0;padding:0;margin:0;min-width:0}
+.public-transfers-page input,.public-transfers-page select,.public-transfers-page textarea{max-width:100%}
+.public-transfers-page .table-wrap{overflow-x:auto}
+.public-transfers-page td{vertical-align:top;overflow-wrap:anywhere}
+.public-transfers-page .inline-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.public-transfers-page .inline-actions h2{margin-right:auto}
+.public-transfers-page #transfer-document-list li{margin:12px 0;overflow-wrap:anywhere}
+.public-transfers-page #transfer-document-list .btn{margin-left:12px}
+@media(max-width:650px){.public-transfers-page .form-grid{grid-template-columns:minmax(0,1fr)}.public-transfers-page .inline-actions .btn{min-height:44px}.public-transfers-page{width:100%}}

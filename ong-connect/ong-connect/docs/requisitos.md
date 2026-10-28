@@ -1,21 +1,20 @@
-# Requisitos — versão demonstrativa atual
+# Requisitos vigentes
 
-## Funcionais implementados
-- RF01: catálogo e detalhes de ONGs.
-- RF02: catálogo de projetos com filtros, vínculo por ONG e modais.
-- RF03: oportunidades e candidaturas de voluntariado; decisão e histórico local.
-- RF04: simulação de doações e consulta administrativa com filtros.
-- RF05: indicadores de transparência e exportação CSV.
-- RF06: solicitação pública de cadastro de ONG, análise, pré-aprovação e rejeição.
-- RF07: complementação pelo solicitante no mesmo navegador/origem.
-- RF08: cadastro institucional ampliado, rascunhos e publicação manual.
-- RF09: seções expansíveis e contadores de pendências/pré-aprovadas.
-- RF10: cadastro/edição de projetos e ONGs no painel.
+Revisado em 26/10/2026. Estes requisitos descrevem a aplicação; os requisitos da disciplina estão na [matriz acadêmica](academico/MATRIZ-CONFORMIDADE.md).
 
-## Não funcionais
-- Layout responsivo; HTML/CSS/JS puro; dados fictícios.
-- Persistência local demonstrativa, sem sincronização.
-- Não há segurança, disponibilidade ou privacidade adequadas a produção.
+| ID | Requisito |
+|---|---|
+| RF01 | Consultar ONGs, projetos, vagas e transparência pública |
+| RF02 | Registrar e revisar solicitações de ONG, preservando histórico e controle de CNPJ |
+| RF03 | Bloquear novas solicitações após três rejeições distintas do mesmo CNPJ |
+| RF04 | Autenticar contas e restringir operações por perfil e vínculo da ONG |
+| RF05 | Cadastrar projetos completos e selecionar segmentos gerenciados pelo administrador |
+| RF06 | Gerenciar oportunidades, capacidade, agenda e abertura de inscrições |
+| RF07 | Registrar candidaturas compartilhadas com duplicidade e conflito de agenda controlados |
+| RF08 | Analisar, cancelar e promover candidaturas manualmente, com histórico |
+| RF09 | Registrar doações simuladas com reenvio idempotente e cancelamento |
+| RF10 | Separar repasses públicos, documentos privados e prestação de contas |
+| RF11 | Consolidar relatórios por tipo, período e ONG, exportando CSV |
+| RF12 | Consultar auditoria exclusivamente como administrador geral |
 
-## Não implementados
-Autenticação/controle de acesso reais, integração de CNPJ/CEP, envio de e-mails, documentos seguros, gateway de pagamentos, convênios e repasses financeiros reais, auditoria inviolável e testes end-to-end.
+Restrições: chaves estrangeiras, transações, DECIMAL para valores, CSRF, senha com hash, validação no backend e testes de isolamento. O portal usa dados fictícios; não processa pagamentos nem representa aprovação de contas por órgão público. A auditoria não guarda todas as versões anteriores de cada campo. A documentação distingue recursos efetivos, experimentos e propostas futuras.

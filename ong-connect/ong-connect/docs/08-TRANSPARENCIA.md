@@ -1,20 +1,7 @@
-# 08 — Transparência e indicadores
+# 08 — Transparência
 
-## Objetivo
-Demonstrar como uma plataforma social pode apresentar indicadores agregados e informações institucionais de forma compreensível, evitando expor documentos pessoais ou contábeis desnecessariamente.
+Revisado em 26/10/2026.
 
-## Componentes públicos
-- **Quatro indicadores**: organizações, projetos, total de contribuições demonstrativas e projetos que atingiram a meta.
-- **Origem dos recursos**: separação visual entre fontes públicas e privadas quando houver registros disponíveis.
-- **Destinação por área**: agrupamento de valores pelas categorias dos projetos.
-- **Parcerias públicas**: seção preparada para consulta, sem registro transacional de convênios nesta versão.
-- **Compromisso com transparência** e **Como funciona**: conteúdo explicativo.
+A consulta pública diferencia recursos públicos e apoios privados, sem valores previstos. O quadro de distribuição inclui uma linha de recursos públicos gerais e os segmentos dos apoios privados, com percentuais sobre o total recebido. Cancelamentos são excluídos dos totais. Esse gráfico não representa despesas realizadas nem comprova impacto social. Documentos, registros individuais e prestação de contas permanecem na administração. Não há filtro público para detalhar recebimentos por ONG/projeto.
 
-## Interpretação correta
-**Meta** é objetivo do projeto; **valor-base** é dado fictício; **contribuição simulada** é uma operação local; **recebimento real** e **despesa comprovada** não são apurados. A distribuição por categoria mostra a finalidade informada, não comprova aplicação dos recursos.
-
-## Exemplo didático
-Se o JSON inicial define R$ 1.000 de arrecadação fictícia e o usuário registra R$ 50 simulados, a interface pode apresentar R$ 1.050. Isso **não significa** que R$ 1.050 tenham entrado em uma conta bancária.
-
-## Limitação
-O sistema não cadastra nem valida repasses públicos reais. A seção não deve inventar parceiros, convênios ou números. Para uma evolução futura, seriam necessários campos para órgão, instrumento, vigência, valor previsto, recebido e aplicado.
+Referências: [README](../README.md), [modelo de dados](09-ESTRUTURA-DE-DADOS.md) e [relatório acadêmico](academico/RELATORIO-ACADEMICO.md).

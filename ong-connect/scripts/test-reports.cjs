@@ -1,0 +1,33 @@
+const assert=require('node:assert/strict');
+module.exports=async({Client,admin,manager,visitor,ok})=>{
+ const read=(client,resource,filters={})=>client.call(resource,'GET',undefined,undefined,true,filters);
+ assert.equal((await visitor.call('relatorios')).status,401);
+ const volunteer=await new Client().login('voluntario@example.com');assert.equal((await volunteer.call('relatorios')).status,403);
+ assert.equal((await admin.call('relatorios','POST',{})).status,405);
+ const financial=await admin.call('relatorios');assert.equal(financial.status,200,JSON.stringify(financial));
+ const own=await manager.call('relatorios');assert.equal(own.status,200);assert.deepEqual(own.linhas.map(r=>r.ongId),[1]);
+ assert.equal((await read(manager,'relatorios',{ongId:2})).status,403);
+ const donations=await admin.call('doacoes'),transfers=await admin.call('repasses_publicos');
+ const sum=(rows,key)=>rows.reduce((n,r)=>n+Math.round(Number(r[key])*100),0);
+ assert.equal(sum(financial.linhas,'publico'),sum(transfers.repasses.filter(r=>r.status==='Recebido'),'valor_recebido'));
+ assert.equal(sum(financial.linhas,'privado'),sum(donations.doacoes.filter(r=>r.status==='Simulada'),'valor'));
+ assert.equal(sum(financial.linhas,'total'),sum(financial.linhas,'publico')+sum(financial.linhas,'privado'));
+ assert.equal(sum(financial.linhas,'publico_cancelado'),sum(transfers.repasses.filter(r=>r.status==='Cancelado'),'valor_recebido'));
+ ok('relatórios financeiros isolam ONGs e conciliam origens e cancelamentos sem misturar totais');
+ const empty=await read(admin,'relatorios',{inicio:'1900-01-01',fim:'1900-01-01'});assert.equal(sum(empty.linhas,'total'),0);
+ assert.equal((await read(admin,'relatorios',{inicio:'2026-02-30'})).status,422);
+ assert.equal((await read(admin,'relatorios',{inicio:'2026-10-26',fim:'2026-01-01'})).status,422);
+ assert.equal((await read(admin,'relatorios',{tipo:'desconhecido'})).status,422);
+ for(const tipo of ['projetos','voluntariado']){const r=await read(manager,'relatorios',{tipo});assert.equal(r.status,200);assert.equal(r.linhas.length,1);assert.equal(r.linhas[0].ongId,1);}
+ ok('relatórios validam datas e consolidam projetos e candidaturas pelo período e escopo');
+ const filtered=await read(admin,'repasses_publicos',{status:'Recebido',pendencia:'documentos'});assert.equal(filtered.status,200,JSON.stringify(filtered));assert.ok(filtered.repasses.every(r=>r.status==='Recebido'&&Number(r.documentos)===0));
+ assert.equal(sum(filtered.repasses,'valor_recebido'),Math.round(Number(filtered.resumo.recebido)*100));
+ const none=await read(admin,'repasses_publicos',{inicio:'1900-01-01',fim:'1900-01-01'});assert.equal(none.pagination.total,0);assert.equal(Number(none.resumo.recebido),0);
+ assert.equal((await read(manager,'repasses_publicos')).repasses.every(r=>Number(r.ong_id)===1),true);
+ ok('repasses filtram pendências e datas com resumo consistente e sem ampliar permissões');
+ const log=await read(admin,'auditoria',{recurso:'segmentos'});assert.equal(log.status,200);assert.ok(log.auditoria.length>0);const first=log.auditoria[0];assert.ok(first.alvo_nome);
+ const exact=await read(admin,'auditoria',{recurso:'segmentos',registroId:first.registro_id});assert.ok(exact.auditoria.every(r=>r.recurso==='segmentos'&&r.registro_id===first.registro_id));
+ const old=await read(admin,'auditoria',{inicio:'1900-01-01',fim:'1900-01-01'});assert.equal(old.pagination.total,0);
+ assert.equal((await manager.call('auditoria')).status,403);
+ ok('auditoria identifica registros pelo nome e filtra período e histórico sem liberar acesso à ONG');
+};

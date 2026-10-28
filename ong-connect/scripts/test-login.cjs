@@ -1,0 +1,26 @@
+const assert=require('node:assert/strict');
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+module.exports=async(client,base)=>{
+  await client.send('Page.navigate',{url:base+'/index.html'});await pause(600);
+  await client.evaluate(`document.querySelector('button[data-login-open]').click()`);
+  assert.equal(await client.evaluate(`document.querySelector('#login-demo-modal').hidden`),false,'Botão abre modal');
+  assert.equal(await client.evaluate('document.activeElement.id'),'login-demo-email');
+  await client.evaluate(`document.querySelector('#login-demo-email').value='invalido';document.querySelector('#login-demo-form').requestSubmit()`);
+  assert.equal(await client.evaluate('location.pathname'),'/index.html','Campos inválidos não navegam');
+  await client.evaluate(`document.querySelector('#login-demo-modal').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
+  assert.equal(await client.evaluate(`document.querySelector('#login-demo-modal').hidden`),true,'Escape fecha');
+  assert.equal(await client.evaluate(`document.querySelector('#login-demo-email').value`),'','Fechamento limpa campos');
+  await client.evaluate(`document.querySelector('button[data-login-open]').click()`);
+  assert.equal(await client.evaluate(`document.querySelector('#login-demo-modal').hidden`),false,'Botão permite reabrir o modal');
+  await client.evaluate(`document.querySelector('#login-demo-modal [data-login-close]').click()`);
+  await client.send('Network.enable');client.events=[];
+  const email='tester-login-visual@example.com',password='senha-ficticia-de-teste';
+  await client.evaluate(`document.querySelector('button[data-login-open]').click();document.querySelector('#login-demo-email').value=${JSON.stringify(email)};document.querySelector('#login-demo-password').value=${JSON.stringify(password)};document.querySelector('#login-demo-form').requestSubmit()`);
+  await pause(800);
+  assert.equal(await client.evaluate('location.pathname'),'/dashboard/index.html','Credenciais fictícias abrem painel');
+  const traffic=JSON.stringify(client.events.filter(event=>event.method==='Network.requestWillBeSent'));
+  assert.equal(traffic.includes(email)||traffic.includes(password),false,'Credenciais não aparecem nas requisições');
+  const stored=await client.evaluate(`JSON.stringify([Object.entries(localStorage),Object.entries(sessionStorage)])`);
+  assert.equal(stored.includes(email)||stored.includes(password),false,'Credenciais não são persistidas');
+  console.log('OK: modal visual, campos obrigatórios, fechar/cancelar e navegação sem envio ou armazenamento de credenciais.');
+};

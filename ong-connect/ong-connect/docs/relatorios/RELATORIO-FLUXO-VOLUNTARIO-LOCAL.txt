@@ -1,0 +1,16 @@
+IMPLEMENTAÇÃO LOCAL — ACESSO DO VOLUNTÁRIO
+
+Ao selecionar uma oportunidade sem autenticação, o sistema pergunta se a
+pessoa já possui cadastro, oferecendo login ou criação de conta.
+Após cadastrar, a pessoa entra com sua senha e retoma a mesma oportunidade.
+A candidatura depende do preenchimento e envio explícito do formulário.
+Voluntários autenticados abrem diretamente o formulário. Outros perfis
+recebem orientação para utilizar uma conta de voluntário.
+Cancelar fecha a escolha sem iniciar uma candidatura.
+Páginas sem formulário encaminham à página de projetos com a vaga escolhida.
+
+Validação: sintaxe dos dois arquivos JavaScript aprovada. Teste em Chrome
+com banco isolado aprovado para escolha, cancelamento, login, cadastro,
+retomada da oportunidade e ausência de candidatura automática.
+
+Alterações apenas locais. Nenhuma publicação no servidor realizada.

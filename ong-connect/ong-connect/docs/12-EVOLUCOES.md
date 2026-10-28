@@ -1,15 +1,7 @@
-# 12 — Possibilidades de evolução futura
+# 12 — Evoluções propostas
 
-As propostas abaixo **não fazem parte da versão implementada** e servem como oportunidades de continuidade acadêmica.
+Revisado em 26/10/2026.
 
-1. **Backend e banco de dados:** PHP e MariaDB para centralizar cadastros.
-2. **Autenticação e permissões:** perfis de administrador, ONG e voluntário com autorização efetiva.
-3. **Notificações:** e-mail transacional para pré-aprovação, complementação e decisão.
-4. **Integração cadastral:** consulta autorizada de CNPJ e CEP.
-5. **Documentos:** armazenamento seguro e fluxo de revisão documental.
-6. **Financeiro:** integração com pagamentos e separação entre previsto, recebido e aplicado.
-7. **Transparência pública:** cadastro verificável de parcerias, fontes e relatórios.
-8. **Testes:** suíte automatizada de interface e validação de acessibilidade.
-9. **Indicadores:** filtros por período, organização e causa, com dados reais quando houver infraestrutura.
+Prioridades futuras: reduzir chamadas redundantes, substituir contadores por consultas resumidas, paralelizar dependências independentes e medir novamente; agrupar agregações dos relatórios; ampliar histórico com versões quando houver exigência; normalizar dias/agenda ou extrair campos indexados do JSON conforme o perfil real de consultas. Outras tecnologias só devem ser introduzidas com problema, hipótese, experimento e custo de operação documentados. Estas propostas não são funcionalidades já implementadas.
 
-Essas evoluções não são pré-requisitos para demonstrar os objetivos do protótipo atual.
+Referências: [README](../README.md), [modelo de dados](09-ESTRUTURA-DE-DADOS.md) e [relatório acadêmico](academico/RELATORIO-ACADEMICO.md).

@@ -1,27 +1,53 @@
-/* Acesso demonstrativo: não autentica nem transmite credenciais. */
+/* Login e cadastro com sessão do servidor. */
 (()=>{
-  const triggers=[...document.querySelectorAll('[data-login-open]')];
-  if(!triggers.length)return;
-  const dashboard=location.pathname.includes('/pages/')?'../dashboard/index.html':'dashboard/index.html';
-  const overlay=document.createElement('div');
-  overlay.id='login-demo-modal';
-  overlay.className='modal-overlay';
-  overlay.hidden=true;
-  overlay.innerHTML=`<section class="modal-dialog login-demo-dialog" role="dialog" aria-modal="true" aria-labelledby="login-demo-title">
-    <div class="modal-header"><div><h2 id="login-demo-title">Entrar no ONG Connect</h2><p>Acesso demonstrativo ao painel administrativo.</p></div><button class="modal-close" type="button" data-login-close aria-label="Fechar">×</button></div>
-    <form class="login-demo-form" id="login-demo-form" novalidate>
-      <div class="form-group"><label for="login-demo-email">E-mail</label><input class="field" type="email" id="login-demo-email" placeholder="seuemail@exemplo.com" autocomplete="off"></div>
-      <div class="form-group"><label for="login-demo-password">Senha</label><input class="field" type="password" id="login-demo-password" placeholder="Digite sua senha" autocomplete="off"></div>
-      <p class="small muted">Demonstração: não utilize senhas reais. Nenhum dado é validado, salvo ou enviado.</p>
-      <div class="modal-actions"><button type="button" class="btn btn-outline" data-login-close hidden>Cancelar</button><button type="submit" class="btn">Entrar</button></div>
-    </form></section>`;
-  document.body.appendChild(overlay);
-  let previousFocus=null;
-  const close=()=>{overlay.hidden=true;document.body.classList.remove('modal-open');previousFocus?.focus()};
-  const open=()=>{previousFocus=document.activeElement;overlay.hidden=false;document.body.classList.add('modal-open');overlay.querySelector('#login-demo-email').focus()};
-  triggers.forEach(btn=>btn.addEventListener('click',open));
-  overlay.querySelectorAll('.modal-close').forEach(btn=>btn.addEventListener('click',close));
-  
-  document.addEventListener('keydown',e=>{if(overlay.hidden)return;if(e.key==='Tab'){const els=[...overlay.querySelectorAll('button,input')];const first=els[0],last=els[els.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
-  overlay.querySelector('form').addEventListener('submit',e=>{e.preventDefault();window.location.assign(dashboard)});
+ const overlay=document.createElement('div');overlay.id='login-demo-modal';overlay.className='modal-overlay';overlay.hidden=true;
+ overlay.innerHTML=`<section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title"><div class="modal-header"><h2 id="auth-title">Entrar</h2><button type="button" data-close aria-label="Fechar">×</button></div><form id="auth-form"><div class="form-group" id="auth-name-group" hidden><label for="auth-name">Nome</label><input class="field" id="auth-name" maxlength="150" autocomplete="name"></div><div class="form-group"><label for="auth-email">E-mail</label><input class="field" id="auth-email" type="email" maxlength="190" autocomplete="username" required></div><div class="form-group"><label for="auth-password">Senha</label><input class="field" id="auth-password" type="password" maxlength="200" autocomplete="current-password" required></div><p id="auth-message" role="status"></p><div class="modal-actions"><button class="btn" type="submit">Entrar</button><button class="btn btn-outline" type="button" id="auth-mode">Criar conta de voluntário</button></div></form></section>`;
+ const volunteerFields=[['telefone','Telefone / WhatsApp','tel',40],['nascimento','Data de nascimento','date',10],['cidade','Cidade','text',120],['estado','Estado (UF)','select',2],['disponibilidade','Dias e horários disponíveis','textarea',500],['habilidades','Habilidades e áreas de interesse','textarea',2000],['experiencia','Experiência com voluntariado (opcional)','textarea',2000]];
+ const fieldsHtml=(prefix)=>volunteerFields.map(([key,label,type,max])=>`<div class="form-group"><label for="${prefix}-${key}">${label}</label>${type==='select'?`<select class="field" id="${prefix}-${key}" name="${key}"><option value="">Selecione</option>${'AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ').map(uf=>`<option>${uf}</option>`).join('')}</select>`:type==='textarea'?`<textarea class="field" id="${prefix}-${key}" name="${key}" maxlength="${max}" rows="2"></textarea>`:`<input class="field" id="${prefix}-${key}" name="${key}" type="${type}" maxlength="${max}" ${key==='nascimento'?`max="${new Date().toLocaleDateString('en-CA')}"`:''}>`}</div>`).join('');
+ const extra=document.createElement('div');extra.id='auth-volunteer-fields';extra.hidden=true;extra.innerHTML=fieldsHtml('auth');overlay.querySelector('#auth-message').before(extra);
+ overlay.querySelector('form').classList.add('login-demo-form');
+ overlay.querySelector('[data-close]').classList.add('modal-close');
+ overlay.classList.add('auth-overlay');
+ document.body.append(overlay);let register=false,previous=null,busy=false;
+ const form=overlay.querySelector('form'),message=overlay.querySelector('#auth-message');
+ let resume=null;
+ const close=()=>{if(busy)return;overlay.hidden=true;form.reset();resume=null;document.body.classList.remove('modal-open');previous?.focus()};
+ document.addEventListener('click',e=>{const trigger=e.target.closest('[data-login-open]');if(!trigger)return;e.preventDefault();previous=trigger;overlay.hidden=false;message.textContent='';document.body.classList.add('modal-open');overlay.querySelector('#auth-email').focus()});
+ overlay.querySelector('[data-close]').onclick=close;
+ overlay.addEventListener('keydown',e=>{if(e.key==='Escape')close();if(e.key==='Tab'){const fields=[...overlay.querySelectorAll('button,input')].filter(el=>!el.disabled&&el.getClientRects().length),first=fields[0],last=fields.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+ overlay.querySelector('#auth-mode').onclick=()=>{register=!register;extra.hidden=!register;extra.querySelectorAll('input,select,textarea').forEach(el=>{el.disabled=!register;el.required=register&&el.name!=='experiencia'});overlay.querySelector('#auth-name-group').hidden=!register;overlay.querySelector('#auth-name').required=register;overlay.querySelector('#auth-password').minLength=register?12:1;overlay.querySelector('#auth-password').autocomplete=register?'new-password':'current-password';overlay.querySelector('#auth-title').textContent=register?'Criar conta de voluntário':'Entrar';form.querySelector('[type=submit]').textContent=register?'Cadastrar':'Entrar';overlay.querySelector('#auth-mode').textContent=register?'Já tenho conta':'Criar conta de voluntário';message.textContent=register?'Use senha com ao menos 12 caracteres.':''};
+ const choice=document.createElement('div');choice.className='modal-overlay';choice.hidden=true;
+ choice.innerHTML='<section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="volunteer-auth-title"><div class="modal-header"><h2 id="volunteer-auth-title">Você já possui cadastro?</h2><button class="modal-close" type="button" data-cancel aria-label="Fechar">×</button></div><p>Entre ou crie uma conta de voluntário para continuar nesta oportunidade. A candidatura só será enviada após sua confirmação.</p><div class="modal-actions"><button class="btn" type="button" data-existing>Já tenho cadastro</button><button class="btn btn-outline" type="button" data-new>Quero me cadastrar</button><button class="btn btn-outline" type="button" data-cancel>Cancelar</button></div></section>';
+ choice.classList.add('auth-overlay','auth-choice');
+ choice.querySelector('.modal-dialog').setAttribute('aria-describedby','volunteer-auth-description');
+ choice.querySelector('.modal-dialog > p').id='volunteer-auth-description';
+ choice.querySelector('.modal-dialog > p').textContent='Entre ou crie sua conta para continuar nesta oportunidade.';
+ const note=document.createElement('p');note.className='auth-note';note.textContent='Você poderá revisar os dados antes de enviar sua candidatura.';
+ choice.querySelector('.modal-dialog').append(note);
+ document.body.append(choice);let pending=null,choiceFocus=null;
+ const dismissChoice=()=>{choice.hidden=true;pending=null;document.body.classList.remove('modal-open');choiceFocus?.focus()};
+ choice.addEventListener('click',e=>{if(e.target===choice||e.target.closest('[data-cancel]'))dismissChoice()});
+ choice.addEventListener('keydown',e=>{if(e.key==='Escape')dismissChoice();if(e.key==='Tab'){const buttons=[...choice.querySelectorAll('button')],first=buttons[0],last=buttons.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
+ const authenticate=mode=>{resume=pending;pending=null;choice.hidden=true;previous=choiceFocus;form.reset();if(register!==mode)overlay.querySelector('#auth-mode').click();overlay.hidden=false;message.textContent=mode?'Use senha com ao menos 12 caracteres.':'';overlay.querySelector(mode?'#auth-name':'#auth-email').focus()};
+ choice.querySelector('[data-existing]').onclick=()=>authenticate(false);
+ choice.querySelector('[data-new]').onclick=()=>authenticate(true);
+ window.ongAuth={requireVolunteer(callback){pending=callback;choiceFocus=document.activeElement;choice.hidden=false;document.body.classList.add('modal-open');choice.querySelector('[data-existing]').focus()}};
+ form.onsubmit=async e=>{e.preventDefault();if(busy||!form.reportValidity())return;busy=true;form.querySelector('[type=submit]').disabled=true;
+ try{await getSession(true);const result=await apiRequest(register?'cadastro':'login','POST',{...Object.fromEntries(new FormData(form)),nome:overlay.querySelector('#auth-name').value,email:overlay.querySelector('#auth-email').value,senha:overlay.querySelector('#auth-password').value});
+ if(register){overlay.querySelector('#auth-mode').click();message.textContent=result.mensagem+' Entre para continuar.';overlay.querySelector('#auth-password').value='';overlay.querySelector('#auth-password').focus();return;}
+ sessionState=null;
+ if(resume){if(result.usuario.perfil!=='voluntario'){message.textContent='Esta ação exige uma conta de voluntário. Entre com uma conta desse perfil.';return;}const next=resume;busy=false;close();await next();return;}
+ location.href=base+(result.usuario.perfil==='voluntario'?'pages/login.html':'dashboard/index.html');
+ }catch(error){message.textContent=error.message}finally{busy=false;form.querySelector('[type=submit]').disabled=false;}};
+ document.querySelectorAll('button[data-login-open]').forEach(b=>b.textContent='Entrar');
+ document.addEventListener('DOMContentLoaded',async()=>{
+ if(document.body.dataset.page!=='login')return;const panel=document.querySelector('main .panel');
+ try{const session=await getSession(true);if(!session.usuario){panel.innerHTML='<p>Entre na sua conta ou crie uma conta de voluntário.</p><button class="btn" data-login-open>Entrar / Cadastrar</button>';return;}
+ panel.replaceChildren();const title=document.createElement('h2');title.textContent='Olá, '+session.usuario.nome;panel.append(title);
+ const profile=document.createElement('form');profile.innerHTML='<label>Nome<input class="field" name="nome" maxlength="150" required></label><label>Telefone<input class="field" name="telefone" maxlength="40"></label><button class="btn" type="submit">Salvar perfil</button><p role="status"></p>';if(session.usuario.perfil==='voluntario'){profile.querySelector('button').insertAdjacentHTML('beforebegin',fieldsHtml('profile').replace(/<div class="form-group"><label for="profile-telefone">[\s\S]*?<\/div>/,''));for(const [key] of volunteerFields)profile.elements[key].value=key==='telefone'?session.usuario.telefone:(session.usuario.dados_voluntario?.[key]||'');}profile.elements.nome.value=session.usuario.nome;profile.elements.telefone.value=session.usuario.telefone;profile.onsubmit=async e=>{e.preventDefault();const b=profile.querySelector('button');b.disabled=true;try{await apiRequest('perfil','PUT',Object.fromEntries(new FormData(profile)));sessionState=null;profile.querySelector('p').textContent='Perfil atualizado.'}catch(error){profile.querySelector('p').textContent=error.message}finally{b.disabled=false}};panel.append(profile);
+ if(session.usuario.perfil!=='voluntario'){const link=document.createElement('a');link.className='btn';link.href=base+'dashboard/index.html';link.textContent='Abrir painel';panel.append(link);}
+ else{await refreshShared();for(const c of candidaturas()){const row=document.createElement('p');row.textContent='Candidatura #'+c.id+' — '+c.status;if(['Pendente','Lista de espera','Aprovado'].includes(c.status)){const button=document.createElement('button');button.className='btn btn-sm';button.textContent='Cancelar';button.onclick=async()=>{button.disabled=true;try{await apiRequest('candidaturas','PUT',{status:'Cancelado'},c.id);location.reload()}catch(error){button.disabled=false;alert(error.message)}};row.append(' ',button)}panel.append(row);}for(const d of store.get('doacoes')){const row=document.createElement('p');row.textContent='Doação simulada #'+d.id+' — '+money(d.valor)+' — '+d.status;if(d.status==='Simulada'){const button=document.createElement('button');button.textContent='Cancelar simulação';button.className='btn btn-sm';button.onclick=async()=>{button.disabled=true;try{await apiRequest('doacoes','PUT',{status:'Cancelada'},d.id);location.reload()}catch(error){button.disabled=false;alert(error.message)}};row.append(button)}panel.append(row)}}
+ const logout=document.createElement('button');logout.className='btn btn-outline';logout.textContent='Sair';logout.onclick=async()=>{try{await apiRequest('logout','POST');sessionState=null;location.reload()}catch(error){alert(error.message)}};panel.append(logout);
+ }catch(error){panel.textContent=error.message;}
+ });
 })();

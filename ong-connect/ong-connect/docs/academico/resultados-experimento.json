@@ -1,0 +1,72 @@
+{
+  "executado_em": "2026-10-26T20:28:23-03:00",
+  "mariadb": "11.4.5-MariaDB",
+  "php": "8.5.12",
+  "registros_por_abordagem": 2000,
+  "dias_normalizados": 4000,
+  "tipo": "microexperimento local em tabelas temporárias, consultas aquecidas",
+  "consultas": {
+    "relacional": "SELECT COUNT(*) FROM academic_rel o JOIN academic_dias d ON d.oportunidade_id=o.id WHERE d.dia='SEG'",
+    "json": "SELECT COUNT(*) FROM academic_json WHERE JSON_CONTAINS(dados,'\"SEG\"','$.diasAtuacao')"
+  },
+  "resultados": {
+    "relacional": {
+      "encontrados": 1000,
+      "repeticoes": 20,
+      "min_ms": 2.022,
+      "mediana_ms": 2.138,
+      "p95_ms": 2.68,
+      "explain": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "d",
+          "type": "ref",
+          "possible_keys": "PRIMARY,por_dia",
+          "key": "por_dia",
+          "key_len": "12",
+          "ref": "const",
+          "rows": "1000",
+          "Extra": "Using where; Using index"
+        },
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "o",
+          "type": "eq_ref",
+          "possible_keys": "PRIMARY",
+          "key": "PRIMARY",
+          "key_len": "4",
+          "ref": "ong_connect.d.oportunidade_id",
+          "rows": "1",
+          "Extra": ""
+        }
+      ]
+    },
+    "json": {
+      "encontrados": 1000,
+      "repeticoes": 20,
+      "min_ms": 3.205,
+      "mediana_ms": 3.375,
+      "p95_ms": 4.236,
+      "explain": [
+        {
+          "id": 1,
+          "select_type": "SIMPLE",
+          "table": "academic_json",
+          "type": "ALL",
+          "possible_keys": null,
+          "key": null,
+          "key_len": null,
+          "ref": null,
+          "rows": "2052",
+          "Extra": "Using where"
+        }
+      ]
+    }
+  },
+  "json_invalido_rejeitado": true,
+  "extensao_json_sem_alter_table": true,
+  "extensao_relacional_com_alter_table": true,
+  "limites": "Não mede produção, rede, concorrência, escrita, armazenamento ou JSON com coluna gerada indexada. Não generalizar desempenho."
+}

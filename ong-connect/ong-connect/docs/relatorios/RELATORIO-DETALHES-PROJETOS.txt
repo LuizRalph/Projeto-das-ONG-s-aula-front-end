@@ -1,0 +1,59 @@
+ONG CONNECT — DETALHES E NAVEGAÇÃO DOS PROJETOS
+Implementação local. Nenhum arquivo enviado ao servidor nesta etapa.
+
+COMPORTAMENTO
+O botão Ver projeto, na aba Projetos de uma ONG, agora leva a
+pages/projetos.html?projeto=ID e abre os detalhes do projeto escolhido.
+Os resumos curtos permanecem na listagem de projetos da ONG.
+
+CADASTRO E EDIÇÃO
+Cinco campos adicionados ao formulário e ao MariaDB:
+- Objetivo e impacto esperado.
+- Público beneficiado.
+- Atividades realizadas.
+- Como o voluntário pode ajudar.
+- Como os recursos serão utilizados.
+Cada campo aceita entre 10 e 3.000 caracteres. São obrigatórios no
+formulário e na criação pela API. A API permite edições parciais que
+preservam campos omitidos e valida os campos informados.
+Os detalhes públicos são escapados antes de renderizar no HTML.
+Dias, horários, locais e vagas continuam em Cadastrar Vagas.
+Não houve alteração no processamento de candidaturas ou apoios.
+
+PRESERVAÇÃO
+Migração 004_project_details.sql aplicada apenas ao banco local.
+Backup: .runtime/local-modelagem/antes-detalhes-projetos-20261024-222140.sql.
+Projetos existentes foram preservados; os novos campos ficam vazios até
+a ONG preenchê-los. A interface apresenta aviso de informação pendente,
+sem inventar objetivos ou promessas de destinação de recursos.
+
+VALIDAÇÃO
+31 verificações de integração aprovadas, incluindo cadastro sem detalhes
+rejeitado, persistência dos cinco campos, validação da edição, preservação
+de campos omitidos e isolamento por ONG.
+No Chrome, banco exclusivo ong_connect_test_1792891275142:
+- Cinco verificações anteriores de auditoria/painel aprovadas.
+- Cadastro pelo formulário e reabertura com os cinco detalhes aprovados.
+- Clique real no link Ver projeto, página e projeto corretos aprovados.
+- Exibição dos detalhes, botão de apoio e aviso de simulação aprovados.
+Sintaxe PHP e JavaScript dos arquivos alterados verificada.
+O teste de criação de projeto foi executado somente no banco de testes.
+Cadastro existente não foi preenchido automaticamente no banco principal.
+
+ARQUIVOS PRINCIPAIS
+database/migrations/004_project_details.sql
+ong-connect/api/index.php
+ong-connect/dashboard/projetos.html
+ong-connect/assets/js/app.js
+scripts/test-shared.cjs
+scripts/test-project-details.cjs
+scripts/test-modelagem-browser.cjs
+scripts/test-projects.cjs (fixture adaptada aos campos obrigatórios)
+README e documentação de back-end.
+
+PRÓXIMA CONFERÊNCIA MANUAL
+Abrir http://127.0.0.1:8080/pages/ongs.html e atualizar com Ctrl+F5.
+Conhecer ONG -> Projetos -> Ver projeto.
+Para completar um projeto existente, acessar o painel administrativo,
+Projetos -> Editar, preencher os novos campos e salvar.
+Publicação no servidor depende de autorização posterior.

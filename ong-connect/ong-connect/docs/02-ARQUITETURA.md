@@ -1,36 +1,28 @@
-# 02 — Arquitetura e organização do código
+# 02 — Arquitetura atual
 
-## Visão geral
-O ONG Connect é uma aplicação **frontend estática**. O navegador solicita arquivos HTML, CSS, JavaScript e JSON a um servidor HTTP local. O JavaScript lê dados iniciais e os combina com registros persistidos no `localStorage`.
+Revisado em 26/10/2026. Aplicação multipágina; não é SPA. Frontend sem framework, API PHP/PDO, MariaDB e arquivos privados.
 
-```text
-Navegador / Live Server
-  ├─ HTML: estrutura das páginas
-  ├─ CSS: apresentação responsiva
-  ├─ JS: eventos, validações, modais, filtros e painéis
-  ├─ JSON: dados iniciais de ONGs, projetos e oportunidades
-  └─ localStorage: solicitações, cadastros, edições, doações e candidaturas locais
+```mermaid
+flowchart LR
+    UI[HTML CSS JavaScript] -->|HTTP JSON e cookie de sessão| API[PHP e PDO]
+    API -->|Transações, FK, SQL e JSON| DB[(MariaDB)]
+    API --> FILES[Documentos em diretório privado]
+    UI --> PREF[Preferências locais e de sessão]
+    SEED[JSON de exemplos] --> CLI[Instalador CLI]
+    CLI --> DB
 ```
 
-## Arquivos principais
-- `index.html`: home, carrosséis, formulários e modais públicos.
-- `pages/`: catálogos, transparência, complementação e páginas auxiliares.
-- `dashboard/`: indicadores, ONGs, projetos, voluntários, doações e relatórios.
-- `assets/css/style.css`: estilos globais e componentes visuais.
-- `assets/js/app.js`: funções compartilhadas, leitura de JSON, interface pública e armazenamento.
-- `assets/js/dashboard.js`: lógica administrativa, análise de solicitações e relatórios.
-- `assets/js/complementar-ong.js`: formulário complementar associado ao identificador de solicitação.
-- `assets/js/login-modal.js` e `account.js`: interface demonstrativa de acesso e perfil.
-- `data/*.json`: conjunto de registros iniciais fictícios.
+`config/`, `database/`, `scripts/` e `storage/` ficam fora da raiz pública `ong-connect/`. A API valida entradas, CSRF e escopo da ONG. Operações críticas usam transações e bloqueios para capacidade, filas, idempotência e controle de CNPJ.
 
-## Inicialização e dados
-`loadData()` executa `fetch` para `data/ongs.json`, `data/projetos.json` e `data/oportunidades.json`. ONGs e projetos novos são acrescentados aos arrays em memória; edições são aplicadas sobre os dados-base. O `store` prefixa as chaves com `ongconnect_` e usa `JSON.stringify`/`JSON.parse`.
+| Componente | Responsabilidade |
+|---|---|
+| `api/index.php` e `bootstrap.php` | Roteamento, catálogo, validações e PDO |
+| `api/security.php` | Sessão, perfis, vínculos e auditoria |
+| `api/participation.php` | Candidaturas e doações |
+| `api/public-transfers.php` | Repasses e documentos privados |
+| `api/reports.php` | Consultas consolidadas, sem gravar relatórios |
+| `api/segments.php` | Segmentos controlados |
+| `assets/js/app.js`, `navigation.js`, `account.js` | Base pública, navegação e conta |
+| `assets/js/reports-admin.js`, `repasses-publicos.js`, `auditoria.js` | Telas com finalidades separadas |
 
-## Relações conceituais
-Uma ONG pode ter vários projetos; cada projeto pode ter oportunidades de voluntariado e doações simuladas. Candidaturas se vinculam a oportunidades. Solicitações de cadastro de ONG possuem status próprio e podem originar uma ONG publicada.
-
-## Por que usar Live Server?
-Ao abrir HTML diretamente como `file://`, o navegador pode bloquear o `fetch` dos JSON. Um servidor HTTP local resolve esse problema e fornece uma origem consistente ao `localStorage`.
-
-## Cuidados acadêmicos
-`localStorage` é visível e modificável pelo usuário; por isso não representa um banco multiusuário. Não se deve afirmar que há login seguro, pagamento real ou auditoria financeira.
+`loadData()` consulta o catálogo e, na versão atual, também pode carregar registros compartilhados para usuários autenticados. A varredura de desempenho identificou dependências excessivas; as otimizações ainda não foram aplicadas. Não se deve descrever cache de dados privados ou navegação persistente como funcionalidades prontas.

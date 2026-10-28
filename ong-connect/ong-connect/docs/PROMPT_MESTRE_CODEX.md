@@ -1,4 +1,14 @@
-> **Documento histórico / de planejamento.** Pode conter regras antigas. Para o funcionamento implementado nesta versão, consulte `../README.md`, `FLUXOS_ATUAIS.md` e `AUDITORIA_E_LIMPEZA.md`.
+> **Registro histórico, não requisito vigente.** Pode descrever uma versão antiga. Para a entrega de 26/10/2026, use o [README](../README.md) e o [relatório acadêmico](academico/RELATORIO-ACADEMICO.md).
+
+# Arquivo histórico — Prompt de planejamento da versão frontend
+
+**Classificação revisada em 21/10/2026.** O conteúdo abaixo registra uma versão anterior. Foi preservado como evidência histórica e não define requisitos nem instruções vigentes.
+
+Para execução e comportamento atuais, consulte [README](../README.md), [PHP/MariaDB](PHP-MARIADB.md), [fluxos](FLUXOS_ATUAIS.md) e [testes](10-TESTES-E-DEMONSTRACAO.md).
+
+Orientações antigas de Live Server, catálogo exclusivamente local, pré-aprovação/complementação, rascunhos, upload de capa, rejeição de aprovado e entrega obrigatória em ZIP não devem ser aplicadas automaticamente ao MVP atual. O código atual tem PHP/MariaDB e as regras consolidadas nos capítulos revisados. As afirmações de testes abaixo dizem respeito apenas à data original.
+
+---
 
 # PROMPT MESTRE — ONG Connect
 

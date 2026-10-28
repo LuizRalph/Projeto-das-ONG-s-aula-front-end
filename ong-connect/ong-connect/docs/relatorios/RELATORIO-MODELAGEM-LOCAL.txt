@@ -1,0 +1,64 @@
+ONG CONNECT — MODELAGEM LOCAL
+Data: 24/10/2026 — America/Sao_Paulo
+
+ESCOPO CONCLUÍDO
+Criação do controle permanente de CNPJ, adaptação dos históricos,
+ampliação da auditoria, integração à API e consulta administrativa.
+Nenhum acesso ou alteração no servidor ou roteador nesta execução.
+
+ALTERAÇÕES
+- database/migrations/003_cnpj_audit.sql: nova tabela controle_cnpj,
+  vínculos e identificador original no histórico, rejeição única por
+  solicitação e preservação com ON DELETE SET NULL. Auditoria com
+  resultado, detalhes permitidos, requisição, nome e perfil do autor.
+- ong-connect/api/cnpj.php: controle de CNPJ e histórico de decisões.
+- ong-connect/api/index.php: bloqueio de novos pedidos, contagem para
+  administrador, auditoria pública e de falhas e consulta restrita.
+- ong-connect/api/security.php: auditoria ampliada e eventos de conta.
+- ong-connect/assets/js/mvp-admin.js: rejeições e bloqueio no painel.
+- ong-connect/assets/js/navigation.js: acesso à auditoria para admin.
+- ong-connect/dashboard/auditoria.html e assets/js/auditoria.js:
+  consulta com filtros e paginação, sem alteração dos registros.
+- scripts/seed-all-projects.php: carga demonstrativa adaptada ao modelo.
+- scripts/test-shared.cjs, cnpj-test-fixtures.php, test-modelagem.php e
+  test-modelagem-browser.cjs: testes de integração, migração e interface.
+- README.md e docs/BACKEND-COMPARTILHADO.md: documentação atualizada.
+
+BANCO LOCAL
+Backup anterior: .runtime/local-modelagem/antes.sql (arquivo privado).
+Migração aplicada ao banco ong_connect local na porta 3308.
+Nenhuma carga demonstrativa foi reimportada no banco local principal.
+Históricos anteriores foram associados ao controle de cada CNPJ.
+Contagem vem do histórico, sem contador redundante na tabela de controle.
+Nenhuma regra nova de duplicidade de candidaturas foi introduzida.
+
+TESTES EXECUTADOS
+29 verificações de integração aprovadas em banco exclusivo, incluindo
+as 26 verificações anteriores e novos cenários de rejeições, exclusão,
+auditoria, perfis e ausência de senha nos registros consultados.
+5 verificações de migração legada aprovadas: preservação dos eventos,
+deduplicação da contagem, bloqueio de CNPJ com cinco rejeições,
+preservação após excluir solicitações e repetição da migração.
+5 verificações no Chrome aprovadas: restrição ao visitante, consulta
+administrativa, filtro por recurso, painel sem exceções JavaScript,
+link para auditoria e apresentação da quantidade de rejeições.
+Verificação de sintaxe dos arquivos PHP e JavaScript alterados aprovada.
+Captura: .runtime/local-modelagem/auditoria.png.
+Inicialmente, o teste visual encontrou o limite de login deixado pelo
+teste de segurança; a preparação foi corrigida para limpar esse estado
+somente no banco de testes e a execução seguinte passou integralmente.
+
+LIMITES E PRÓXIMAS ETAPAS
+Auditoria registra ações de escrita e falhas tratadas; não registra toda
+navegação, leituras nem corpos das requisições. Não é um log inviolável.
+Sem tela de desbloqueio de CNPJ ou exclusão de solicitações.
+Dados de autoria antigos não são inventados quando não recuperáveis.
+Permissões existentes, candidaturas, doações e vínculos foram preservados.
+As correções dos popups relatadas no prompt inicial permanecem para
+as próximas etapas de ajustes locais e testes funcionais específicos.
+Publicação no servidor depende da validação e aprovação do usuário.
+
+ATUALIZAÇÃO — 24/10/2026
+Publicação posteriormente autorizada e concluída. Ver seção 11 do
+RELATORIO-IMPLANTACAO-203.txt. As afirmações anteriores sobre ausência
+de publicação descrevem o encerramento da etapa local, antes dessa autorização.

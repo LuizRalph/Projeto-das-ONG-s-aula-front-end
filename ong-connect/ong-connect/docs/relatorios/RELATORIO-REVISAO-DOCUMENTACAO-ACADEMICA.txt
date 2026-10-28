@@ -1,0 +1,32 @@
+REVISÃO DOCUMENTAL — 26/10/2026
+
+Base: PDF da disciplina fornecido pelo usuário, duas páginas.
+Atualizados README, capítulos 01 a 12, requisitos, casos de uso, instalação,
+resumos de arquitetura/fluxos e referências de módulos. Descrições de login
+visual e candidaturas/doações apenas locais foram corrigidas nos documentos
+vigentes. Documentos históricos foram identificados como tais.
+
+DER atualizado com as 18 tabelas, cardinalidades, chaves, nulabilidade e
+limitações. Fonte Mermaid independente em docs/academico/DER-ATUAL.mmd.
+Criados relatório acadêmico, referências, matriz de conformidade, roteiro de
+apresentação e protocolo experimental em ong-connect/docs/academico/.
+
+Tema proposto: modelagem híbrida relacional/documental com JSON no MariaDB.
+Grupo informou não haver definição prévia. Enquadramento como tecnologia
+emergente ainda depende do professor; não foi declarada aprovação automática.
+Identificação dos integrantes e entrega/apresentação devem ser completadas
+pelo grupo. Nenhum e-mail foi enviado.
+
+Experimento executado em tabelas temporárias: 2.000 registros por desenho,
+20 repetições por consulta, 1.000 encontrados em cada abordagem, JSON inválido
+rejeitado e extensão de atributo verificada. Execução registrada:
+MariaDB 11.4.5, PHP 8.5.12; medianas 2,138 ms relacional e 3,375 ms JSON.
+Resultados não generalizáveis: comparador relacional indexado e documento
+sem índice derivado, carga local sintética e consultas aquecidas.
+Resultado bruto: docs/academico/resultados-experimento.json.
+
+Validação: links locais dos 32 Markdown revisados/conferidos sem destinos
+ausentes; sem caracteres de substituição Unicode; sintaxe PHP aprovada.
+Experimento validou equivalência e restrição JSON. Tabelas permanentes e
+dados do portal não foram modificados. Sem publicação no servidor.
+Originais preservados em .runtime/docs-before-academic-20261026/.

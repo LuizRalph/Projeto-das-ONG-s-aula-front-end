@@ -1,19 +1,7 @@
-# 11 — Limitações e decisões de escopo
+# 11 — Limitações efetivas
 
-O ONG Connect é um **protótipo acadêmico** e não foi projetado para uso com dados reais. As limitações a seguir descrevem o alcance da demonstração, não defeitos a serem necessariamente corrigidos nesta entrega.
+Revisado em 26/10/2026.
 
-- **Persistência local:** `localStorage` não sincroniza usuários nem computadores.
-- **Login demonstrativo:** não existe autenticação segura ou autorização por ONG.
-- **Doações:** não são pagamentos reais; não há gateway ou comprovante financeiro.
-- **Parcerias públicas:** não há integração com bases oficiais ou lançamento de repasses.
-- **Cadastro:** CNPJ e CEP não são consultados em serviços oficiais; links de complementação não são convites seguros.
-- **Comunicações:** não há envio real de e-mail, SMS ou WhatsApp.
-- **Documentos:** não há upload seguro de documentos pessoais ou bancários.
-- **Auditoria:** histórico local não é inviolável.
-- **Qualidade:** verificações de sintaxe e links não substituem testes de interface.
+Não existem pagamento, integração bancária, transferência pública real, consulta oficial de CNPJ ou aprovação oficial de prestação de contas. A auditoria guarda autoria, ação, resultado e metadados permitidos, sem todas as versões dos valores. Relatórios mostram registros do período pela situação atual; não reconstroem um retrato histórico completo. JSON_VALID valida sintaxe, não obrigatoriedade e significado dos campos; a API complementa a validação. A aplicação é multipágina e a varredura identificou chamadas excessivas ainda não otimizadas. Documentos exigem backup do diretório privado além do banco. O enquadramento acadêmico do tema e a identificação dos autores ainda devem ser confirmados.
 
-## Por que essa arquitetura é adequada ao trabalho?
-Permite demonstrar HTML, CSS, JavaScript, eventos, formulários, armazenamento, filtros, relacionamento entre entidades e experiência do usuário sem depender de servidor de aplicação ou infraestrutura externa.
-
-## Como apresentar corretamente
-Use sempre expressões como **simulado**, **demonstrativo** e **dados fictícios** ao falar de doações, login, repasses e cadastro. Não apresente a aplicação como serviço financeiro ou sistema de gestão oficial.
+Referências: [README](../README.md), [modelo de dados](09-ESTRUTURA-DE-DADOS.md) e [relatório acadêmico](academico/RELATORIO-ACADEMICO.md).

@@ -1,0 +1,66 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const path=require('node:path');
+function testBuilder(){
+ const context=vm.createContext({window:{},diasOportunidade:()=>['SAB']});
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../ong-connect/assets/js/volunteer-scenarios.js'),'utf8'),context);
+ const build=context.window.VolunteerScenarios.build;
+ const opportunities=[{id:1,projetoId:1,vagas:6},{id:2,projetoId:2,vagas:4}];
+ const initial=build([],opportunities);
+ assert.equal(initial.inserted,14);
+ const count=(records,id,status)=>records.filter(r=>r.oportunidadeId===id&&r.status===status).length;
+ assert.equal(count(initial.records,1,'Aprovado'),5);assert.equal(count(initial.records,1,'Pendente'),3);
+ assert.equal(count(initial.records,2,'Aprovado'),4);assert.equal(count(initial.records,2,'Lista de espera'),2);
+ assert.equal(build(initial.records,opportunities).inserted,0);
+ const original={id:'cadastro-existente',oportunidadeId:1,status:'Aprovado'};
+ const result=build([original],opportunities);
+ assert.equal(result.records[0],original);assert.equal(count(result.records,1,'Aprovado'),5);
+ const recreated=build(result.records,opportunities,{reset:true});
+ assert.equal(recreated.records[0],original);assert.equal(new Set(recreated.records.map(r=>r.id)).size,recreated.records.length);
+ assert.throws(()=>build([],[]),/duas oportunidades/);
+ console.log('OK: carga de 14 exemplos, capacidade inicial, idempotência e preservação dos cadastros existentes.');
+}
+module.exports=async(client,base)=>{
+ testBuilder();const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+ await client.send('Page.navigate',{url:base+'/dashboard/voluntarios.html'});await pause(700);
+ const initial=await client.evaluate(`(()=>{const examples=candidaturas().filter(r=>r.demoDataset===VolunteerScenarios.tag);const id=examples.find(r=>r.demoCenario==='ultima-vaga').oportunidadeId;return {total:examples.length,id,capacity:data.oportunidades.find(o=>o.id===id).vagas,pending:examples.find(r=>r.oportunidadeId===id&&r.status==='Pendente').id}})()`);
+ assert.equal(initial.total,14);assert.equal(initial.capacity,6);
+ await client.evaluate(`document.querySelector('#volunteer-filter-status').value='Rejeitado';document.querySelector('#volunteer-filter-status').dispatchEvent(new Event('change',{bubbles:true}));document.querySelectorAll('.volunteer-project-group').forEach(group=>group.open=false)`);
+ await client.send('Page.navigate',{url:base+'/dashboard/voluntarios.html?teste=lista-espera'});await pause(600);
+ assert.equal(await client.evaluate(`document.querySelector('#volunteer-filter-status').value`),'','Reabrir os exemplos limpa filtros que os ocultam');
+ assert.equal(await client.evaluate(`document.querySelectorAll('.volunteer-project-group[open]').length`),0,'Listas iniciam recolhidas, inclusive os exemplos');
+ assert.deepEqual(await client.evaluate(`(()=>{const g=[...document.querySelectorAll('.volunteer-project-group')].find(g=>g.querySelector('.status-aprovado')&&g.querySelector('.status-pendente'));return [...g.querySelectorAll('.volunteer-summary-status')].map(b=>b.textContent.split(':')[0])})()`),['Aprovados','Pendentes'],'Indicadores na ordem solicitada');
+ await client.evaluate(`document.querySelector('.volunteer-project-group summary').click()`);
+ assert.equal(await client.evaluate(`document.querySelector('.volunteer-project-group').open`),true,'Cabeçalho expande a lista');
+ await client.evaluate(`document.querySelector('.volunteer-project-group summary').click()`);
+ assert.equal(await client.evaluate(`document.querySelector('.volunteer-project-group').open`),false,'Cabeçalho recolhe a lista');
+ await client.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+ assert.equal(await client.evaluate(`document.documentElement.scrollWidth>innerWidth+1`),false,'Listas recolhidas cabem no celular');
+ await client.send('Emulation.setDeviceMetricsOverride',{width:1366,height:900,deviceScaleFactor:1,mobile:false});
+ assert.equal(await client.evaluate(`candidaturas().filter(r=>r.demoDataset===VolunteerScenarios.tag).length`),14,'Reabrir não duplica exemplos');
+ assert.equal(await client.evaluate(`document.querySelector('#volunteer-test-panel')===null`),true,'Não há bloco de testes na interface');
+ assert.equal(await client.evaluate(`document.querySelectorAll('#admin-volunteers tbody tr').length`),14,'Inscrições aparecem nas tabelas dos projetos');
+ const counts=()=>client.evaluate(`(()=>{const records=candidaturas().filter(r=>r.oportunidadeId===${initial.id});return {approved:records.filter(r=>r.status==='Aprovado').length,pending:records.filter(r=>r.status==='Pendente').length,waiting:records.filter(r=>r.status==='Lista de espera').length,available:vagasDisponiveis(data.oportunidades.find(o=>o.id===${initial.id}))}})()`);
+ async function decide(id,action){
+  await client.evaluate(`document.querySelectorAll('.volunteer-project-group').forEach(g=>g.open=true);document.querySelector(${JSON.stringify('.'+action+'[data-id="'+id+'"]')}).click();document.querySelector('#decision-reviewer').value='Tester fictício';document.querySelector('#decision-reason').value='Decisão fictícia para verificar capacidade e lista de espera.';document.querySelector('#decision-form').requestSubmit()`);
+ }
+ assert.deepEqual(await counts(),{approved:5,pending:3,waiting:0,available:1});
+ await decide(initial.pending,'approve-candidate');
+ assert.deepEqual(await counts(),{approved:6,pending:0,waiting:2,available:0});
+ assert.equal(await client.evaluate(`document.querySelectorAll('.approve-candidate:not(:disabled)').length`),0,'Não há promoção sem vaga nos dois cenários');
+ const approved=await client.evaluate(`candidaturas().find(r=>r.oportunidadeId===${initial.id}&&r.status==='Aprovado').id`);
+ await decide(approved,'withdraw-candidate');
+ assert.deepEqual(await counts(),{approved:5,pending:0,waiting:2,available:1},'Desistência libera vaga sem promoção automática');
+ const waiting=await client.evaluate(`candidaturas().find(r=>r.oportunidadeId===${initial.id}&&r.status==='Lista de espera').id`);
+ await decide(waiting,'approve-candidate');
+ assert.deepEqual(await counts(),{approved:6,pending:0,waiting:1,available:0},'Promoção manual respeita capacidade');
+ assert.equal(await client.evaluate(`candidaturas().find(r=>r.id===${JSON.stringify(waiting)}).historico.at(-1).statusAnterior`),'Lista de espera');
+ await client.send('Page.navigate',{url:base+'/pages/projetos.html'});await pause(600);
+ await client.evaluate(`openVolunteerModal(${initial.id});const form=document.querySelector('#volunteer-form');for(const el of form.elements){if(el.tagName==='SELECT'){const option=[...el.options].find(o=>o.value);if(option)el.value=option.value}else if(el.type==='checkbox')el.checked=true;else if(el.type==='email')el.value='apos.lotacao@example.com';else if(el.type==='date')el.value='2000-01-15';else if(el.tagName==='TEXTAREA')el.value='Dados fictícios para verificar o cadastro na lista de espera de uma oportunidade lotada.';else if(el.tagName==='INPUT'&&el.type!=='hidden')el.value=el.name==='telefone'?'11999999999':'Pessoa fictícia de teste'}form.requestSubmit()`);
+ assert.equal(await client.evaluate(`candidaturas().find(r=>r.email==='apos.lotacao@example.com')?.status`),'Lista de espera','Inscrição pública em oportunidade lotada entra na fila');
+ assert.equal((await counts()).approved,6);
+ assert.equal(await client.evaluate(`ongNavigation.isDirty(document.querySelector('#volunteer-form'))`),false,'Cadastro salvo não deixa alerta de edição pendente');
+ console.log('OK: última aprovação lota, pendentes vão à fila, desistência libera vaga, promoção é manual e nova inscrição lotada entra em espera.');
+};
+if(require.main===module)testBuilder();

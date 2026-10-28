@@ -1,0 +1,32 @@
+REORGANIZAÇÃO DE RELATÓRIOS, REPASSES E AUDITORIA — LOCAL
+
+Relatórios: consulta consolidada por tipo (financeiro, projetos e voluntariado),
+período inclusivo e ONG autorizada. CSV exporta a consulta com critérios e datas.
+Financeiro separa recursos públicos, privados e valores cancelados, excluindo
+cancelados do total recebido. Repasses usam data do recebimento; apoios privados,
+data da criação. As situações são as atuais, não um retrato histórico da época.
+Projetos e candidaturas são agrupados pela data de cadastro e situação atual.
+
+Repasses: listagem operacional com total recebido nos filtros, pendências de
+prestação de contas e recebimentos sem documentos. Filtros por ONG, período,
+situação e pendências. Cadastro e edição em modal. Documentos e prestação de
+contas permanecem privados. O link Relatórios preserva período e ONG; o botão
+de exportação dessa tela foi substituído pela consulta centralizada.
+
+Auditoria: consulta exclusiva do administrador geral, com filtros por recurso,
+registro, usuário, resultado e período. Ações e nomes legíveis na listagem.
+Detalhes técnicos em modal. Nomes correspondem ao nome atual do registro;
+registros removidos continuam identificados pelo tipo e número. Atalho de
+histórico nos repasses somente para o administrador geral.
+
+Permissões verificadas no backend. Responsável pela ONG vê apenas organizações
+vinculadas. Consulta pública e regras de transparência não foram alteradas.
+Nenhuma nova tabela ou migração foi necessária.
+
+Validação: 42 verificações de integração aprovadas. Chrome aprovou consultas,
+CSV, atalhos, cadastro e edição em modal, upload de documento, alteração da
+prestação de contas, cancelamento com recálculo e preservação da transparência
+pública. Conferidos os três layouts em 390 px e o acesso restrito da ONG.
+Sintaxe PHP e JavaScript aprovada. Testes usaram banco isolado, sem alterar
+recebimentos ou contas do banco principal. Alterações ainda locais, sem
+publicação no servidor.

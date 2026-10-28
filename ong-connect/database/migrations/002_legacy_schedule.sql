@@ -1,0 +1,10 @@
+UPDATE oportunidades SET dados=JSON_SET(dados,'$.diasAtuacao',CASE
+ WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(dados,'$.periodo'))) LIKE '%segunda%' THEN JSON_ARRAY('SEG')
+ WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(dados,'$.periodo'))) LIKE '%terça%' THEN JSON_ARRAY('TER')
+ WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(dados,'$.periodo'))) LIKE '%quarta%' THEN JSON_ARRAY('QUA')
+ WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(dados,'$.periodo'))) LIKE '%quinta%' THEN JSON_ARRAY('QUI')
+ WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(dados,'$.periodo'))) LIKE '%sexta%' THEN JSON_ARRAY('SEX')
+ WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(dados,'$.periodo'))) LIKE '%sábado%' THEN JSON_ARRAY('SAB')
+ WHEN LOWER(JSON_UNQUOTE(JSON_EXTRACT(dados,'$.periodo'))) LIKE '%domingo%' THEN JSON_ARRAY('DOM')
+ ELSE JSON_ARRAY() END)
+ WHERE JSON_EXTRACT(dados,'$.diasAtuacao') IS NULL;

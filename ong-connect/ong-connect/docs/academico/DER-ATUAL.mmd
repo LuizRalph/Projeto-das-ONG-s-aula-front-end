@@ -1,0 +1,179 @@
+erDiagram
+    USUARIOS ||--o{ USUARIOS_ONGS : possui_vinculos
+    ONGS ||--o{ USUARIOS_ONGS : tem_responsaveis
+    ONGS ||--o{ PROJETOS : organiza
+    SEGMENTOS o|--o{ PROJETOS : classifica
+    PROJETOS ||--o{ OPORTUNIDADES : oferece
+    USUARIOS ||--o{ CANDIDATURAS : realiza
+    OPORTUNIDADES ||--o{ CANDIDATURAS : recebe
+    CANDIDATURAS ||--o{ HISTORICO_CANDIDATURAS : registra
+    USUARIOS ||--o{ HISTORICO_CANDIDATURAS : decide
+    USUARIOS ||--o{ DOACOES : simula
+    PROJETOS ||--o{ DOACOES : recebe
+    ONGS ||--o{ REPASSES_PUBLICOS : recebe
+    PROJETOS o|--o{ REPASSES_PUBLICOS : vinculo_opcional
+    USUARIOS ||--o{ REPASSES_PUBLICOS : registra
+    REPASSES_PUBLICOS ||--o{ DOCUMENTOS_REPASSES_PUBLICOS : possui
+    USUARIOS ||--o{ DOCUMENTOS_REPASSES_PUBLICOS : envia
+    CONTROLE_CNPJ ||--o{ SOLICITACOES_ONGS : acompanha
+    CONTROLE_CNPJ ||--o{ HISTORICO_SOLICITACOES : preserva
+    ONGS o|--o{ SOLICITACOES_ONGS : resultado_publicado
+    SOLICITACOES_ONGS o|--o{ SOLICITACOES_ONGS : tentativa_anterior
+    SOLICITACOES_ONGS o|--o{ HISTORICO_SOLICITACOES : pode_ser_removida
+    USUARIOS o|--o{ HISTORICO_SOLICITACOES : analisa
+    USUARIOS o|--o{ AUDITORIA : autor_opcional
+
+    ONGS {
+        int id PK
+        char cnpj UK "Pode ser nulo em registros legados"
+        varchar nome
+        varchar categoria
+        varchar cidade
+        varchar email
+    }
+    USUARIOS {
+        int id PK
+        varchar email UK
+        varchar nome
+        varchar senha_hash
+        enum perfil "admin, ong, voluntario"
+        varchar telefone
+        longtext dados_voluntario "JSON opcional"
+    }
+    USUARIOS_ONGS {
+        int usuario_id PK,FK
+        int ong_id PK,FK
+    }
+    SEGMENTOS {
+        int id PK
+        varchar nome UK
+        tinyint ativo
+    }
+    PROJETOS {
+        int id PK
+        int ong_id FK
+        int segmento_id FK "Nulo permitido no schema; obrigatório na API"
+        varchar titulo
+        varchar categoria "Nome compatível com clientes legados"
+        text descricao
+        text objetivo
+        text publico_alvo
+        text atividades
+        text orientacoes_voluntariado
+        text uso_recursos
+        decimal meta
+        enum status
+    }
+    OPORTUNIDADES {
+        int id PK
+        int projeto_id FK
+        longtext dados "JSON válido"
+    }
+    CANDIDATURAS {
+        int id PK
+        int usuario_id FK
+        int oportunidade_id FK
+        enum status
+        longtext dados "JSON válido da inscrição"
+        tinyint ativa "Gerada, 1 ou NULL"
+        timestamp criado_em
+    }
+    HISTORICO_CANDIDATURAS {
+        int id PK
+        int candidatura_id FK
+        int autor_id FK
+        varchar status_anterior
+        varchar status_novo
+        varchar justificativa
+        timestamp criado_em
+    }
+    DOACOES {
+        int id PK
+        int usuario_id FK
+        int projeto_id FK
+        decimal valor "DECIMAL(12,2), positivo"
+        enum status "Simulada ou Cancelada"
+        varchar chave "Única por usuário"
+    }
+    REPASSES_PUBLICOS {
+        int id PK
+        int ong_id FK
+        int projeto_id FK "Opcional, da mesma ONG"
+        int registrado_por FK
+        varchar orgao_origem
+        varchar instrumento
+        varchar finalidade
+        decimal valor_recebido
+        date recebido_em
+        enum status
+        enum prestacao_situacao
+        varchar motivo_cancelamento
+        timestamp cancelado_em
+        varchar chave "Única por autor"
+        char hash_cadastro
+        tinyint simulado
+    }
+    DOCUMENTOS_REPASSES_PUBLICOS {
+        int id PK
+        int repasse_id FK
+        int enviado_por FK
+        enum tipo
+        varchar nome_original
+        char arquivo UK "Identificador no armazenamento privado"
+        varchar mime
+        int tamanho
+        char sha256
+        timestamp excluido_em "Remoção lógica"
+    }
+    CONTROLE_CNPJ {
+        int id PK
+        char cnpj UK
+        timestamp bloqueado_em
+        varchar motivo_bloqueio
+    }
+    SOLICITACOES_ONGS {
+        int id PK
+        int controle_cnpj_id FK
+        int ong_id FK "Opcional"
+        int solicitacao_anterior_id FK "Opcional"
+        char cnpj
+        varchar nome
+        enum status
+    }
+    HISTORICO_SOLICITACOES {
+        int id PK
+        int solicitacao_id FK "Opcional após remoção"
+        int controle_cnpj_id FK
+        int autor_id FK "Opcional"
+        int solicitacao_original_id "Identificação preservada, sem FK"
+        int rejeicao_unica UK "Opcional"
+        varchar status_anterior
+        varchar status_novo
+        text justificativa
+    }
+    AUDITORIA {
+        bigint id PK
+        int autor_id FK "Opcional"
+        varchar autor_nome
+        varchar autor_perfil
+        varchar recurso
+        int registro_id "Referência polimórfica, sem FK genérica"
+        varchar acao
+        enum resultado
+        longtext detalhes "JSON opcional de metadados permitidos"
+        char requisicao_id
+        timestamp criado_em
+    }
+    LOGIN_TENTATIVAS {
+        char chave PK
+        int tentativas
+        datetime inicio
+    }
+    MVP_LOCK {
+        int id PK
+        tinyint seeded
+    }
+    SCHEMA_MIGRATIONS {
+        varchar versao PK
+        timestamp aplicado_em
+    }

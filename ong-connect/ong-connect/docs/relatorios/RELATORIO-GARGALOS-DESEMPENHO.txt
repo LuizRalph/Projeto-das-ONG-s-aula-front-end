@@ -1,0 +1,103 @@
+VARREDURA DE DESEMPENHO — 26/10/2026
+
+ESCOPO
+Inspeção do JavaScript, PHP, consultas SQL, respostas HTTP e servidor.
+Três amostras HTTP por recurso em localhost, IP do servidor e domínio.
+Chrome autenticado em sete páginas, usando banco isolado e o mesmo código
+publicado. Nenhuma otimização ou configuração de produção foi aplicada.
+Não foi adicionada mensagem de carregamento.
+
+MEDIÇÕES
+Servidor: carga média 0,01 / 0,06 / 0,08, cerca de 2,4 GB de memória disponível,
+disco com 35% de uso. Não apareceu saturação nessa janela de observação.
+Consulta SQL dos indicadores do catálogo: 1,07 a 3,02 ms em três execuções.
+O EXPLAIN mostrou uso dos índices existentes; há subconsultas correlacionadas.
+Compressão gzip confirmada no Apache: app.js de 53.229 para 15.384 bytes.
+
+Via IP interno: catálogo completo em 33 a 45 ms; sessão em 12 a 16 ms.
+Via domínio: catálogo completo em 78 a 102 ms; sessão em 47 a 66 ms.
+Primeira consulta da página de projetos via domínio: 271 ms; seguintes 45/72 ms.
+Essas medições partiram desta rede; não equivalem a um teste de usuário externo.
+
+Chrome local, autenticado, sem limitação artificial de rede:
+Página                 APIs   Primeiro conteúdo visível
+Projetos do painel       6              60 ms
+ONGs do painel           5              48 ms
+Relatórios               4              64 ms
+Repasses                 4              56 ms
+Auditoria                4              44 ms
+Projetos públicos        4              68 ms
+Transparência            5             140 ms
+O volume decodificado dos recursos variou de 186 a 236 KB por navegação.
+Isso não significa download integral: cache e gzip alteram o tráfego efetivo.
+Não reproduzida tela branca prolongada nessa amostra.
+
+GARGALOS IDENTIFICADOS
+1. ALTA PRIORIDADE — DADOS SEM NECESSIDADE PARA A TELA
+   assets/js/app.js: loadData chama refreshShared para qualquer usuário
+   autenticado. Isso carrega todas as páginas de candidaturas e doações antes
+   de liberar a renderização, inclusive em Projetos e Transparência.
+   Evidência: Projetos públicos autenticado fez catálogo, sessão, candidaturas
+   e doações. Transparência fez as mesmas consultas e o total público.
+   Impacto: cresce com o histórico e multiplica viagens à rede. O catálogo já
+   contém valores agregados para vários desses usos.
+   Correção indicada: dependências por tela e contadores resumidos, mantendo
+   os registros completos apenas onde são efetivamente necessários.
+
+2. ALTA PRIORIDADE — CADEIA DE REQUISIÇÕES ANTES DA RENDERIZAÇÃO
+   loadData aguarda catálogo, depois consulta total público na Transparência,
+   depois sessão e depois os registros compartilhados. Nos painéis de finanças,
+   sessão -> contexto -> consulta também ocorre em sequência.
+   Evidência da Transparência: catálogo inicia aos 116 ms, total aos 146 ms,
+   sessão aos 166 ms e registros aos 174/175 ms na amostra local.
+   Correção indicada: paralelizar apenas consultas independentes, compartilhar
+   contexto da sessão e remover dependências que não precisam bloquear a tela.
+
+3. MÉDIA PRIORIDADE — SOLICITAÇÕES COMPLETAS PARA UM CONTADOR
+   assets/js/navigation.js: syncPending usa fetchPages('solicitacoes') para
+   calcular o número de pendentes em cada entrada no painel e ao ganhar foco.
+   Evidência: uma consulta de solicitações em Projetos, Relatórios, Repasses e
+   Auditoria, embora não sejam a tela de análise das solicitações.
+   Correção indicada: endpoint de contagem com escopo e permissão verificados,
+   sem transportar históricos completos para desenhar um número no menu.
+
+4. MÉDIA PRIORIDADE — SESSÃO DUPLICADA EM AUDITORIA
+   assets/js/auditoria.js consulta sessao com fetch próprio enquanto menu e
+   conta usam getSession, que já agrupa chamadas simultâneas.
+   Evidência: duas requisições de sessão na navegação para Auditoria.
+   Correção indicada: reutilizar o mecanismo comum, sem cache entre usuários.
+
+5. MÉDIA PRIORIDADE — REVALIDAÇÃO DE RECURSOS ESTÁTICOS
+   CSS/JS servidos sem Cache-Control explícito. ETag e Last-Modified estão
+   presentes e gzip funciona. Parte dos recursos usa versão, parte não.
+   Correção indicada: padronizar versão ou hash antes de configurar cache
+   prolongado para os arquivos estáticos. Manter dados privados fora desse cache.
+
+6. ESCALABILIDADE — CONSULTAS POR ORGANIZAÇÃO NOS RELATÓRIOS
+   api/reports.php executa duas consultas financeiras por ONG, além da lista
+   das ONGs: 1 + 2N consultas. Com 12 ONGs são 25 consultas desse relatório.
+   O catálogo também usa contagens correlacionadas por projeto e oportunidade.
+   Não explicam a demora atual nas medições, mas crescem com o volume de dados.
+   Correção indicada: agregações em lote por ONG/projeto, preservando os
+   filtros, o escopo de acesso e os critérios de data já testados.
+
+7. FLUIDEZ — DOCUMENTO RECONSTRUÍDO A CADA NAVEGAÇÃO
+   A aplicação é multipágina. Os links comuns carregam outro documento e
+   reconstruem cabeçalho e menu. As áreas dinâmicas aguardam as consultas.
+   showLoading também substitui o conteúdo em algumas inicializações; não é
+   uma página inteira oculta por CSS. Não foi localizada uma regra geral que
+   esconda todo o body até o carregamento.
+   Reduzir requisições vem antes de alterar o modelo de navegação. Qualquer
+   transição posterior deve manter a tela atual até a próxima estar pronta,
+   com fallback para links normais, foco e tratamento de falhas adequados.
+
+LIMITES E PRÓXIMA ETAPA
+Sem evidência de necessidade de mais CPU, RAM ou troca do MariaDB.
+Sem teste de carga, nem reprodução do intervalo exato em que o usuário viu
+a tela branca. Os tempos do Chrome são locais; o PHP local atende em processo
+único, enquanto produção usa Apache com mod_php, portanto as durações não são
+comparáveis diretamente. As dependências e a quantidade de chamadas, sim.
+Priorizar itens 1 a 4, medir novamente e só então avaliar mudanças de navegação.
+
+Evidência detalhada do navegador: .runtime/performance-scan.json.
+Script reutilizável: scripts/scan-page-performance.cjs.

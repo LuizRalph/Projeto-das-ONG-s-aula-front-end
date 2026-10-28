@@ -1,5 +1,5 @@
 function adminTable(headers,rows){return `<div class="table-wrap"><table class="table"><thead><tr>${headers.map(h=>`<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
-async function adminInit(){try{await loadData()}catch(e){toast(e.message,true);return}const page=document.body.dataset.page;
+async function adminInit(){const page=document.body.dataset.page;if(page==='dashboard')return;showLoading();try{await loadData()}catch(e){showError(e);return}dataTargets().forEach(el=>el.removeAttribute('aria-busy'));
 if(page==='admin-ongs'){
  const requestList=$('#ong-requests-list');
  let approvedRequestId=null;
@@ -181,14 +181,16 @@ if(page==='admin-volunteers'){
  const history=c=>Array.isArray(c.historico)?c.historico:[];
  const fmtDate=d=>{const dt=new Date(d);return Number.isNaN(dt.getTime())?'—':dt.toLocaleString('pt-BR')};
  const close=(id)=>{const el=$(id);el.hidden=true;if(!$$('.modal-overlay:not([hidden])').length)document.body.classList.remove('modal-open')};
- const open=(id)=>{$(id).hidden=false;document.body.classList.add('modal-open')};
+ const open=(id)=>{$(id).hidden=false;document.body.classList.add('modal-open');if(id==='#decision-modal')window.ongNavigation?.markClean($('#decision-form'))};
  const filters=document.createElement('div');filters.className='filters volunteer-filters';filters.innerHTML='<label for="volunteer-filter-project">Projeto</label><select class="field" id="volunteer-filter-project"><option value="">Todos</option></select><label for="volunteer-filter-opportunity">Oportunidade</label><select class="field" id="volunteer-filter-opportunity"><option value="">Todas</option></select><label for="volunteer-filter-status">Status</label><select class="field" id="volunteer-filter-status"><option value="">Todos</option></select>';
  $('#admin-volunteers').before(filters);
  filters.querySelector('#volunteer-filter-project').insertAdjacentHTML('beforeend',data.projetos.map(p=>`<option value="${escapeHtml(p.id)}">${escapeHtml(p.titulo)}</option>`).join(''));
  filters.querySelector('#volunteer-filter-opportunity').insertAdjacentHTML('beforeend',data.oportunidades.map(o=>`<option value="${escapeHtml(o.id)}">${escapeHtml(o.titulo)}</option>`).join(''));
- filters.querySelector('#volunteer-filter-status').insertAdjacentHTML('beforeend',['Pendente','Lista de espera','Aprovado','Desistente','Rejeitado'].map(status=>`<option>${escapeHtml(status)}</option>`).join(''));
+ filters.querySelector('#volunteer-filter-status').insertAdjacentHTML('beforeend',['Pendente','Lista de espera','Aprovado','Cancelado','Rejeitado'].map(status=>`<option>${escapeHtml(status)}</option>`).join(''));
  filters.querySelectorAll('select').forEach(el=>el.addEventListener('change',()=>refresh()));
+ window.ongNavigation?.restoreFilters(filters);
  const refresh=()=>{
+  const openGroups=new Set($$('#admin-volunteers .volunteer-project-group[open]').map(group=>group.dataset.projectId));
   const selectedOpportunity=$('#volunteer-filter-opportunity').value,selectedStatus=$('#volunteer-filter-status').value;
     const selectedProject=$('#volunteer-filter-project').value,all=candidaturas();
     const projects=data.projetos.filter(p=>!selectedProject||String(p.id)===selectedProject).map(project=>{
@@ -197,9 +199,10 @@ if(page==='admin-volunteers'){
      const projectCandidates=all.filter(candidate=>opportunities.some(item=>Number(item.id)===Number(candidate.oportunidadeId)));
      const approvedUnique=new Set(projectCandidates.filter(candidate=>candidate.status==='Aprovado').map(candidate=>normalizarEmail(candidate.email))).size;
      const goal=Number(project.voluntariosNecessarios)||0;
-     const statusSummary=['Pendente','Lista de espera','Aprovado','Desistente','Rejeitado'].map(status=>{
+     const statusSummary=['Aprovado','Pendente','Lista de espera','Desistente','Rejeitado'].map(status=>{
       const count=projectCandidates.filter(candidate=>candidate.status===status).length;
-      return count?`<span class="volunteer-summary-status">${escapeHtml(status)}: ${count}</span>`:'';
+      const label={Aprovado:'Aprovados',Pendente:'Pendentes','Lista de espera':'Lista de espera',Desistente:'Desistentes',Rejeitado:'Rejeitados'}[status];
+      return count?`<span class="volunteer-summary-status status-${status==='Aprovado'?'aprovado':status==='Pendente'?'pendente':status==='Lista de espera'?'espera':'outros'}">${escapeHtml(label)}: ${count}</span>`:'';
      }).join('');
      const opportunitySections=opportunities.filter(item=>!selectedOpportunity||String(item.id)===selectedOpportunity).map(item=>{
       const dayLabels={SEG:'Seg',TER:'Ter',QUA:'Qua',QUI:'Qui',SEX:'Sex',SAB:'Sáb',DOM:'Dom'};
@@ -214,9 +217,10 @@ if(page==='admin-volunteers'){
       return `<section class="volunteer-opportunity-group"><div class="volunteer-opportunity-heading"><div><h3>${escapeHtml(item.titulo)}</h3><p>${escapeHtml(item.modalidade)} · ${escapeHtml(item.local)} · ${escapeHtml(days)} · ${escapeHtml(item.horarioInicio||'—')}–${escapeHtml(item.horarioFim||'—')}</p></div><div class="volunteer-opportunity-capacity">${approved}/${Number(item.vagas)||0} aprovados · ${available} vagas · ${waiting} em espera</div></div>${rows.length?adminTable(['Voluntário','E-mail','Cidade','Candidatura','Status','Ações'],rows):'<p class="empty volunteer-opportunity-empty">Nenhuma candidatura para esta oportunidade com os filtros selecionados.</p>'}</section>`;
      }).join('');
      const organization=ong(project.ongId)?.nome||'ONG não identificada';
-    return `<details class="volunteer-project-group"><summary><span class="volunteer-project-name">${escapeHtml(organization)} · ${escapeHtml(project.titulo)}</span><span class="volunteer-project-progress">${approvedUnique}${goal?` / ${goal}`:''} pessoas únicas aprovadas${goal?' (meta)':''}</span><span class="volunteer-project-statuses">${statusSummary||'<span class="volunteer-summary-status">Sem candidaturas</span>'}</span></summary><div class="volunteer-project-content">${opportunitySections}</div></details>`;
+    return `<details class="volunteer-project-group" data-project-id="${project.id}"><summary><span class="volunteer-project-heading"><span class="volunteer-project-name">${escapeHtml(organization)} · ${escapeHtml(project.titulo)}</span><span class="volunteer-project-statuses">${statusSummary||'<span class="volunteer-summary-status">Sem candidaturas</span>'}</span><span class="volunteer-project-progress">${approvedUnique}${goal?` / ${goal}`:''} pessoas únicas aprovadas${goal?' (meta)':''}</span></span><span class="volunteer-project-toggle" aria-hidden="true"></span></summary><div class="volunteer-project-content">${opportunitySections}</div></details>`;
     }).filter(Boolean);
     $('#admin-volunteers').innerHTML=projects.length?projects.join(''):'<div class="empty">Nenhum projeto com oportunidades corresponde aos filtros.</div>';
+ $$('#admin-volunteers .volunteer-project-group').forEach(group=>group.open=openGroups.has(group.dataset.projectId));
  $$('.view-candidate').forEach(b=>b.onclick=()=>{const c=candidaturas().find(x=>String(x.id)===b.dataset.id);if(!c)return;const fields=[['Nome',c.nome],['Oportunidade',opportunity(c.oportunidadeId)?.titulo],['ONG',ong(projeto(opportunity(c.oportunidadeId)?.projetoId)?.ongId)?.nome],['Status',c.status],['E-mail',c.email],['Telefone / WhatsApp',c.telefone],['Nascimento',c.nascimento],['Cidade',c.cidade],['Estado',c.estado],['Disponibilidade',c.disponibilidade],['Experiência',c.experiencia],['Habilidades',c.habilidades],['Motivação',c.motivacao],['Data da candidatura',fmtDate(c.data)],['Motivo da rejeição',c.motivoRejeicao],['Motivo da desistência',c.motivoDesistencia],['Tentativa anterior',c.candidaturaAnteriorId]];const logs=history(c);$('#candidate-details').innerHTML=fields.filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>`<div class="detail-field"><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v)}</span></div>`).join('')+`<div class="full"><h3>Histórico de decisões</h3>${logs.length?'<ol class="audit-list">'+logs.map(h=>`<li><strong>${escapeHtml(h.status)}</strong> — ${escapeHtml(fmtDate(h.data))}<div>Responsável: ${escapeHtml(h.responsavel)}</div><div>Justificativa: ${escapeHtml(h.justificativa)}</div><div class="muted">Anterior: ${escapeHtml(h.statusAnterior||'—')}</div></li>`).join('')+'</ol>':'<p class="muted">Nenhuma decisão registrada nesta versão.</p>'}</div>`;open('#candidate-modal');$('#close-candidate-modal').focus()});
  $$('.approve-candidate,.reject-candidate,.withdraw-candidate').forEach(b=>b.onclick=()=>{
   const c=candidaturas().find(x=>String(x.id)===b.dataset.id);
@@ -236,43 +240,34 @@ if(page==='admin-volunteers'){
   $('#decision-reviewer').focus();
  });
  };
- $('#decision-form').onsubmit=e=>{
-  e.preventDefault();
-  if(!e.currentTarget.reportValidity())return;
-  const arr=candidaturas(),c=arr.find(x=>String(x.id)===$('#decision-id').value),status=$('#decision-status').value;
-  const responsavel=$('#decision-reviewer').value.trim(),justificativa=$('#decision-reason').value.trim();
-  if(!c||!['Pendente','Lista de espera','Aprovado'].includes(c.status))return toast('O estado desta candidatura não permite essa decisão.',true);
-  if(!['Aprovado','Rejeitado','Desistente'].includes(status)||responsavel.length<2||justificativa.length<10)return toast('Preencha o responsável e uma justificativa de pelo menos 10 caracteres.',true);
-  if(status==='Desistente'&&c.status!=='Aprovado')return toast('Somente candidaturas aprovadas podem registrar desistência.',true);
-  if(status==='Rejeitado'&&!['Pendente','Lista de espera'].includes(c.status))return toast('Somente candidaturas pendentes ou em espera podem ser rejeitadas.',true);
-  if(status==='Aprovado'){
-   const o=opportunity(c.oportunidadeId);
-   if(!['Pendente','Lista de espera'].includes(c.status)||!o||vagasDisponiveis(o)<=0)return toast('Não há vaga disponível para esta aprovação.',true);
-    if(candidaturaConflitaHorario(c,arr,c.id))return toast('Não é possível aprovar: a agenda se sobrepõe a outra candidatura ativa deste voluntário.',true);
-   if(arr.some(x=>String(x.id)!==String(c.id)&&Number(x.oportunidadeId)===Number(c.oportunidadeId)&&String(x.email||'').trim().toLowerCase()===String(c.email||'').trim().toLowerCase()&&x.status==='Aprovado'))return toast('Já existe uma candidatura aprovada com este e-mail.',true);
-  }
-  const anterior=c.status,timestamp=new Date().toISOString();
-  c.historico=[...history(c),{status,statusAnterior:anterior,responsavel,justificativa,data:timestamp}];
-  c.status=status;
-  if(status==='Rejeitado')c.motivoRejeicao=justificativa;
-  if(status==='Desistente')c.motivoDesistencia=justificativa;
-  if(status==='Aprovado'){
-   delete c.motivoRejeicao;
-   const o=opportunity(c.oportunidadeId),aprovados=arr.filter(x=>Number(x.oportunidadeId)===Number(c.oportunidadeId)&&x.status==='Aprovado').length;
-   if(aprovados>=Number(o.vagas))arr.filter(x=>Number(x.oportunidadeId)===Number(c.oportunidadeId)&&x.status==='Pendente').forEach(x=>{
-    x.status='Lista de espera';
-    x.historico=[...history(x),{status:'Lista de espera',statusAnterior:'Pendente',responsavel,justificativa:'As vagas foram preenchidas; candidatura encaminhada à lista de espera.',data:timestamp}];
-   });
-  }
-  try{store.set('candidaturas',arr)}catch{return toast('Não foi possível salvar a decisão.',true)}
-  close('#decision-modal');
-  refresh();
-  toast(status==='Desistente'?'Desistência registrada; a vaga está disponível para promoção manual.':status==='Rejeitado'?'Candidatura rejeitada com justificativa registrada.':`Candidatura ${anterior==='Lista de espera'?'promovida':'aprovada'} com justificativa registrada.`);
+ $('#decision-form').onsubmit=async e=>{
+ e.preventDefault();const form=e.currentTarget;if(!form.reportValidity()||form.dataset.busy)return;
+ form.dataset.busy='true';const button=$('#confirm-decision');button.disabled=true;
+ try{await apiRequest('candidaturas','PUT',{status:$('#decision-status').value==='Desistente'?'Cancelado':$('#decision-status').value,justificativa:$('#decision-reason').value.trim()},$('#decision-id').value);
+ await loadData();window.ongNavigation?.markClean(form);close('#decision-modal');refresh();document.dispatchEvent(new Event('ong:volunteer-decision'));toast('Decisão registrada no servidor.');}
+ catch(error){toast(error.message,true)}finally{delete form.dataset.busy;button.disabled=false;}
  };
+ document.addEventListener('ong:volunteer-test-data',event=>{
+  if(event.detail?.resetFilters!==false){
+  filters.querySelectorAll('select').forEach(select=>select.value='');
+  const search=$('#volunteer-search');if(search){search.value='';search.dispatchEvent(new Event('input',{bubbles:true}))}
+  window.ongNavigation?.rememberFilters();
+  }
+  refresh();
+  // As listas iniciam recolhidas; apenas a escolha do visitante abre os grupos.
+ });
  $('#close-candidate-modal').onclick=()=>close('#candidate-modal');$('#close-decision').onclick=()=>close('#decision-modal');refresh();
 }
 if(page==='admin-donations'){
  const all=store.get('doacoes');
+ const pageSize=50;
+ let currentPage=Math.max(1,Number(window.ongNavigation?.get('donationPage',1))||1);
+ const searchControls=document.createElement('div');searchControls.className='filters record-filters';
+ searchControls.innerHTML='<label for="donation-search">Buscar doação</label><input id="donation-search" class="field" type="search" data-remember placeholder="ONG, projeto, valor, data ou status">';
+ const pagination=document.createElement('nav');pagination.className='donation-pagination';pagination.setAttribute('aria-label','Páginas do histórico de doações');
+ pagination.innerHTML='<button type="button" class="btn btn-outline" id="donation-prev" aria-controls="admin-donations">Anterior</button><label for="donation-page">Página</label><select id="donation-page" class="field" aria-controls="admin-donations"></select><button type="button" class="btn btn-outline" id="donation-next" aria-controls="admin-donations">Próxima</button>';
+ $('#admin-donations').before(searchControls);$('#admin-donations').after(pagination);
+ const search=$('#donation-search'),pageSelect=$('#donation-page');
  const ongFilter=$('#filter-donation-ong'),projectFilter=$('#filter-donation-project'),statusFilter=$('#filter-donation-status');
  const startFilter=$('#filter-donation-start'),endFilter=$('#filter-donation-end');
  const details=all.map(d=>{const p=projeto(d.projetoId),o=p?ong(p.ongId):null;return {donation:d,project:p,organization:o}});
@@ -283,23 +278,38 @@ if(page==='admin-donations'){
  updateProjects();
  const statuses=[...new Set(all.map(d=>String(d.status||'Não informado')))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
  statusFilter.innerHTML='<option value="">Todos os status</option>'+statuses.map(st=>`<option value="${escapeHtml(st)}">${escapeHtml(st)}</option>`).join('');
+ window.ongNavigation?.restoreFilters();updateProjects();window.ongNavigation?.restoreFilters();
  const render=()=>{
+  const normalize=value=>String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  const query=normalize(search.value.trim());
   const result=details.filter(({donation:d,project:p,organization:o})=>{
    if(ongFilter.value&&String(o?.id)!==ongFilter.value)return false;
    if(projectFilter.value&&String(p?.id)!==projectFilter.value)return false;
    if(statusFilter.value&&String(d.status||'Não informado')!==statusFilter.value)return false;
+   if(query&&!normalize([o?.nome||'ONG não identificada',p?.titulo||'Projeto não encontrado',money(d.valor),new Date(d.data).toLocaleDateString('pt-BR'),d.status||'Não informado'].join(' ')).includes(query))return false;
    const date=new Date(d.data);if((startFilter.value||endFilter.value)&&Number.isNaN(date.getTime()))return false;
    const day=!Number.isNaN(date.getTime())?`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`:'';
    return (!startFilter.value||day>=startFilter.value)&&(!endFilter.value||day<=endFilter.value);
-  });
-  const rows=result.map(({donation:d,project:p,organization:o})=>[escapeHtml(o?.nome||'ONG não identificada'),escapeHtml(p?.titulo||'Projeto não encontrado'),money(d.valor),Number.isNaN(new Date(d.data).getTime())?'—':new Date(d.data).toLocaleDateString('pt-BR'),escapeHtml(d.status||'Não informado')]);
+  }).sort((a,b)=>(Date.parse(b.donation.data)||0)-(Date.parse(a.donation.data)||0));
+  const pages=Math.max(1,Math.ceil(result.length/pageSize));currentPage=Math.min(pages,currentPage);
+  const start=(currentPage-1)*pageSize;
+  const rows=result.slice(start,start+pageSize).map(({donation:d,project:p,organization:o})=>[escapeHtml(o?.nome||'ONG não identificada'),escapeHtml(p?.titulo||'Projeto não encontrado'),money(d.valor),Number.isNaN(new Date(d.data).getTime())?'—':new Date(d.data).toLocaleDateString('pt-BR'),escapeHtml(d.status||'Não informado')]);
   $('#admin-donations').innerHTML=rows.length?adminTable(['ONG responsável','Projeto','Valor','Data','Status'],rows):'<div class="empty">Nenhuma doação encontrada para os filtros selecionados.</div>';
-  $('#donation-filter-summary').textContent=`${result.length} de ${all.length} doações exibidas · Total filtrado: ${money(result.reduce((sum,x)=>sum+Number(x.donation.valor||0),0))}`;
+  $('#donation-filter-summary').textContent=`${result.length?start+1:0}–${Math.min(start+pageSize,result.length)} de ${result.length} doações encontradas (${all.length} no histórico) · Página ${currentPage} de ${pages} · Total filtrado: ${money(result.reduce((sum,x)=>sum+Number(x.donation.valor||0),0))}`;
+  pageSelect.innerHTML=Array.from({length:pages},(_,index)=>`<option value="${index+1}">${index+1} de ${pages}</option>`).join('');pageSelect.value=String(currentPage);
+  $('#donation-prev').disabled=currentPage===1;$('#donation-next').disabled=currentPage===pages;pageSelect.disabled=pages===1;
+  window.ongNavigation?.set('donationPage',currentPage);
  };
- ongFilter.addEventListener('change',()=>{updateProjects();render()});
- for(const el of [projectFilter,statusFilter,startFilter,endFilter])el.addEventListener('change',render);
- $('#clear-donation-filters').addEventListener('click',()=>{for(const el of [ongFilter,projectFilter,statusFilter,startFilter,endFilter])el.value='';updateProjects();render()});
+ const resetPage=()=>{currentPage=1;render()};
+ ongFilter.addEventListener('change',()=>{updateProjects();resetPage()});
+ for(const el of [projectFilter,statusFilter,startFilter,endFilter])el.addEventListener('change',resetPage);
+ search.addEventListener('input',resetPage);
+ $('#donation-prev').addEventListener('click',()=>{currentPage--;render()});
+ $('#donation-next').addEventListener('click',()=>{currentPage++;render()});
+ pageSelect.addEventListener('change',()=>{currentPage=Number(pageSelect.value);render()});
+ $('#clear-donation-filters').addEventListener('click',()=>{for(const el of [ongFilter,projectFilter,statusFilter,startFilter,endFilter,search])el.value='';updateProjects();window.ongNavigation?.rememberFilters();resetPage()});
  render();
+ window.ongNavigation?.markDonationsViewed(all);
 }
-if(page==='admin-reports'){const rows=data.ongs.map(o=>{const items=data.projetos.filter(p=>p.ongId===o.id);return [o.nome,items.length,items.reduce((s,p)=>s+p.meta,0),items.reduce((s,p)=>s+arrecadadoProjeto(p),0)]});$('#admin-reports').innerHTML=adminTable(['ONG','Projetos','Meta','Arrecadação'],rows.map(r=>[escapeHtml(r[0]),String(r[1]),money(r[2]),money(r[3])]));$('#export-csv').onclick=()=>{const csv='ONG;Projetos;Meta;Arrecadacao\n'+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='ong-connect-relatorio.csv';a.click();URL.revokeObjectURL(url)}}}
-document.addEventListener('DOMContentLoaded',adminInit);
+}
+document.addEventListener('DOMContentLoaded',async()=>{await adminInit();const names={'admin-volunteers':['#admin-volunteers','volunteer-search','Buscar voluntário']};const item=names[document.body.dataset.page];if(item)window.ongNavigation?.addTableSearch($(item[0]),item[1],item[2]);});

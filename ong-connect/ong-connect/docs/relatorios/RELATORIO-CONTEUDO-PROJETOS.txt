@@ -1,0 +1,62 @@
+ONG CONNECT — ATUALIZAÇÃO EDITORIAL DOS PROJETOS
+Data: 24/10/2026
+Estado: concluído no ambiente local. Servidor não alterado.
+
+ABRANGÊNCIA
+Todos os 17 projetos existentes no banco local foram atualizados.
+Cada projeto recebeu um resumo próprio, um descritivo com vários parágrafos,
+objetivo, público beneficiado, atividades, orientações ao voluntário e uso
+previsto dos recursos. Os textos são propostas fictícias para demonstração
+acadêmica; não apresentam pagamentos ou resultados reais como realizados.
+
+EXIBIÇÃO
+O primeiro parágrafo da descrição é o resumo, com até 140 caracteres e
+18 palavras. A página de ONGs e os cartões de Projetos usam esse parágrafo.
+O modal Saiba mais apresenta o texto completo e todos os detalhes.
+Não houve redução do limite de armazenamento da descrição.
+As agendas, locais, capacidade e condições específicas continuam nas vagas,
+sem criação de horários, endereços ou promessas de atendimento nos textos.
+
+PROJETOS
+Educação para Todos; Conexão Digital; Biblioteca Aberta;
+Alimentando Esperanças; Inverno Acolhedor; Cozinha Comunitária;
+Verde no Bairro; Praia Limpa; Reciclar é Transformar;
+Saúde no Bairro; Movimento para Todos; Bem-Estar na Melhor Idade;
+Adoção com Responsabilidade; Cuidado Animal Comunitário;
+Arte na Comunidade; Música que Aproxima; Teatro de Todos.
+
+PRESERVAÇÃO
+Backup: .runtime/local-modelagem/antes-textos-projetos-20261024-223753.sql.
+Os seis campos textuais foram atualizados em uma transação.
+IDs, títulos, ONGs, categorias, metas, valores históricos, contagens,
+status, imagens e datas de criação permaneceram idênticos ao backup.
+Oportunidades, usuários, candidaturas e apoios não foram modificados.
+Foram adicionados 17 eventos de auditoria para identificar a carga local.
+
+ARQUIVOS
+ong-connect/data/projetos.json: conteúdo completo dos exemplos.
+ong-connect/assets/js/app.js: uso do primeiro parágrafo como resumo.
+scripts/update-project-descriptions.php: carga editorial local protegida.
+scripts/install.php: detalhes preenchidos apenas na instalação inicial.
+CHANGELOG e documentação técnica atualizados.
+
+VALIDAÇÃO
+17 projetos conferidos integralmente contra a fonte editorial.
+Resumos dentro dos limites e descrições com mais de 350 caracteres.
+Comparação dos campos não editoriais com cópia do backup: aprovada.
+Segunda execução da carga: zero projetos alterados.
+31 verificações de integração aprovadas em banco exclusivo, incluindo
+instalação, preservação de dados, permissões, candidaturas, doações,
+bloqueio de CNPJ e auditoria.
+Sintaxe PHP e JavaScript dos arquivos alterados: aprovada.
+
+CONFERÊNCIA
+Atualizar as páginas locais com Ctrl+F5:
+http://127.0.0.1:8080/pages/ongs.html
+http://127.0.0.1:8080/pages/projetos.html
+Abrir Conhecer ONG -> Projetos para os resumos e Saiba mais para os detalhes.
+Publicação no servidor depende de autorização posterior.
+
+PUBLICAÇÃO POSTERIOR AUTORIZADA — 24/10/2026
+Os 17 projetos de exemplo foram atualizados no servidor. O projeto
+exclusivo do servidor foi preservado. Ver seção 12 do relatório de implantação.

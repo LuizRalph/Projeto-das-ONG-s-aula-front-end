@@ -1,0 +1,21 @@
+const assert=require('node:assert/strict');
+module.exports=async({admin,manager,visitor,ok})=>{
+ assert.equal((await visitor.call('segmentos')).status,401);
+ assert.equal((await manager.call('segmentos','POST',{nome:'Proibido'})).status,403);
+ assert.equal((await admin.call('segmentos','POST',{nome:'Sem token'},undefined,false)).status,403);
+ const created=await admin.call('segmentos','POST',{nome:'Skate',ativo:true});assert.equal(created.status,201,JSON.stringify(created));
+ assert.equal((await admin.call('segmentos','POST',{nome:'  skate  ',ativo:true})).status,409);
+ ok('segmentos exigem administrador e CSRF, sem nomes duplicados');
+ const catalog=await visitor.call('catalogo'),project=catalog.projetos.find(p=>p.ongId===1);
+ const body={...project,segmentoId:created.id};
+ assert.equal((await manager.call('projetos','PUT',body,project.id)).status,200);
+ const changed=(await visitor.call('catalogo')).projetos.find(p=>p.id===project.id);assert.equal(changed.categoria,'Skate');assert.equal(changed.segmentoId,created.id);
+ assert.equal((await manager.call('projetos','PUT',{...body,segmentoId:999999},project.id)).status,404);
+ assert.equal((await admin.call('segmentos','PUT',{nome:'Skate social',ativo:false},created.id)).status,200);
+ assert.equal((await manager.call('projetos','PUT',body,project.id)).status,200);
+ assert.equal((await manager.call('projetos','POST',{...body,titulo:'Novo projeto em segmento desativado'})).status,422);
+ assert.equal((await visitor.call('catalogo')).projetos.find(p=>p.id===project.id).categoria,'Skate social');
+ assert.equal((await admin.call('segmentos','PUT',{nome:'Skate social',ativo:true},created.id)).status,200);
+ assert.equal((await manager.call('projetos','PUT',{...project,segmentoId:project.segmentoId},project.id)).status,200);
+ ok('projetos usam segmentos controlados; renomear propaga e desativar preserva vínculos antigos');
+};

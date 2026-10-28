@@ -1,0 +1,87 @@
+ONG CONNECT — REPASSES PÚBLICOS
+Data: 24/10/2026
+Estado: implementado e testado localmente. Servidor e roteador não alterados.
+
+ENTREGA
+- Área administrativa separada dos apoios privados.
+- Cadastro apenas de valores recebidos, sem previsão ou parcelas futuras.
+- ONG, projeto opcional, órgão, instrumento, finalidade, data e valor.
+- Edição, cancelamento justificado, observações e prestação de contas.
+- Documentos privados PDF/JPG/PNG até 2 MB, com verificação MIME e SHA-256.
+- Relatório CSV restrito aos registros autorizados para a conta.
+- Transparência com somente o total geral recebido e válido, sem filtros
+  por ONG/projeto e sem exposição de instrumentos, documentos ou registros.
+- Valores e documentos identificados como demonstrativos.
+
+ACESSO
+Administrador geral: todas as ONGs. Responsável por ONG: somente vínculos
+da conta. Visitantes e voluntários: sem acesso à administração ou anexos.
+Download também valida a autorização; conhecer o ID não concede acesso.
+Escritas exigem CSRF. Reenvios idênticos não duplicam recebimentos.
+
+PERSISTÊNCIA
+Migração 005_public_transfers.sql aplicada ao banco local ong_connect.
+Backup anterior: .runtime/local-modelagem/antes-repasses-publicos-20261024-231531.sql.
+Novas tabelas: repasses_publicos e documentos_repasses_publicos.
+A tabela doacoes e as arrecadações dos projetos não foram misturadas.
+Arquivos em storage/repasses-publicos/NOME_DO_BANCO, fora da raiz pública
+e separados por banco. Nenhum arquivo é servido diretamente por essa pasta.
+Remoção de documento é lógica: o arquivo privado fica retido, mas o
+download e a consulta são bloqueados. Não foi criada rotina de expurgo.
+Auditoria de cadastro, edição, cancelamento, envio, download e remoção.
+
+VALIDAÇÃO
+36 verificações de integração aprovadas em banco exclusivo:
+perfis, isolamento entre ONGs, CSRF, valor/data, vínculo do projeto,
+idempotência concorrente, edição, total agregado, cancelamento, arquivos
+inválidos/grandes/duplicados, integridade e autorização dos downloads.
+No Chrome: cinco verificações anteriores de auditoria/painel e sete
+verificações do novo fluxo aprovadas: cadastro, documento, edição da
+prestação, CSV, total público sem detalhes, layout 390 px e cancelamento.
+Sintaxe dos arquivos PHP/JavaScript alterados aprovada.
+Finfo habilitado no script local; PHP local reiniciado para carregá-lo.
+As primeiras tentativas do teste visual encontraram problemas no próprio
+preparo (leitura da resposta do servidor e extração do ID no teste),
+corrigidos antes da execução completa aprovada.
+
+BANCO PRINCIPAL
+Não foram criados recebimentos ou documentos fictícios no banco principal.
+O endpoint local retorna totalRecebido=0.00 até um registro administrativo.
+Os exemplos usados na validação pertencem somente ao banco de testes.
+
+ARQUIVOS PRINCIPAIS
+database/migrations/005_public_transfers.sql
+ong-connect/api/public-transfers.php e index.php
+ong-connect/dashboard/repasses-publicos.html
+ong-connect/assets/js/repasses-publicos.js, app.js e navigation.js
+ong-connect/assets/css/public-transfers.css
+ong-connect/pages/transparencia.html
+scripts/start-local.ps1, test-public-transfers.cjs,
+test-public-transfers-browser.cjs, test-shared.cjs,
+test-modelagem-browser.cjs, .gitignore e documentação.
+
+CONFERÊNCIA MANUAL
+Administração: http://127.0.0.1:8080/dashboard/repasses-publicos.html
+Público: http://127.0.0.1:8080/pages/transparencia.html
+Entrar com administrador ou responsável por ONG. Documentos e prestação
+de contas não estão disponíveis na página pública.
+Documentação detalhada em ong-connect/docs/REPASSES-PUBLICOS.md.
+Publicação no servidor depende de validação e autorização posteriores.
+
+CARGA DEMONSTRATIVA POSTERIOR — 24/10/2026
+Por solicitação do usuário, foram inseridos exemplos no banco local principal:
+- Seis apoios privados de R$ 1.000, total válido R$ 6.000.
+- Três repasses públicos de R$ 10.000, total válido R$ 30.000.
+- Um apoio privado cancelado de R$ 500 e um repasse público cancelado
+  de R$ 5.000, ambos excluídos dos indicadores.
+Backup: .runtime/local-modelagem/antes-demonstracao-origens-20261024-232706.sql.
+11 registros inseridos com auditoria. Reexecução: zero registros novos.
+Totais conferidos pela API. Sem documentos reais ou previsões de receita.
+A referência anterior a total zero descreve o momento antes desta carga.
+Servidor não alterado.
+
+PUBLICAÇÃO AUTORIZADA POSTERIOR — 24/10/2026
+Módulo e carga demonstrativa sincronizados no servidor. Totais válidos:
+R$ 30.000 públicos e R$ 6.000 privados. Contas e projetos existentes
+preservados. Backup /root/ongconnect-sync-20261024-233921/.
+Ver seção 13 do RELATORIO-IMPLANTACAO-203.txt para verificações e limites.

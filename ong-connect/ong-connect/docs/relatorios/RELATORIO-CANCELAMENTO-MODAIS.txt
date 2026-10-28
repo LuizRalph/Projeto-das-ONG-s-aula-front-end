@@ -1,0 +1,44 @@
+ONG CONNECT — CANCELAMENTO DOS MODAIS
+Data: 24/10/2026
+Estado: corrigido e verificado localmente. Servidor não alterado.
+
+CAUSAS
+O Cancelar da candidatura estava oculto e não possuía evento associado.
+Na doação, o Cancelar da escolha estava oculto e sem evento; a etapa de
+dados tinha apenas Voltar. No perfil, o Cancelar estava oculto e apenas
+o X possuía evento de fechamento.
+
+CORREÇÕES
+Eventos associados aos botões corretos e remoção de hidden nesses botões.
+Adicionado Cancelar nos dados da doação, mantendo Voltar separado.
+Fechamentos descartam os campos temporários e limpam a indicação de
+formulário alterado; não enviam candidatura, doação ou atualização de perfil.
+X, Escape e clique direto no fundo fecham os modais públicos e de perfil.
+Durante envio de candidatura/doação, o fechamento solicita aguardar;
+fechar o modal não é usado como promessa de reverter uma requisição enviada.
+
+ARQUIVOS
+assets/js/app.js, account.js; index.html e pages/ongs.html, projetos.html,
+transparencia.html; seis páginas do dashboard com modal de perfil.
+Testes: scripts/test-modal-cancel.cjs e test-modelagem-browser.cjs.
+README e CHANGELOG atualizados.
+
+VALIDAÇÃO
+Sintaxe dos arquivos JavaScript alterados aprovada.
+Chrome, banco exclusivo ong_connect_test_1792877786472:
+- 24 cenários de doação em quatro páginas (Cancelar nas duas etapas,
+  Voltar seguido de Cancelar, X, Escape e fundo).
+- Oito cenários de candidatura nas duas páginas que possuem o formulário
+  (Cancelar visível, X, Escape e fundo).
+- Seis cenários de Cancelar o perfil nas telas administrativas.
+- Nenhuma requisição POST, PUT, PATCH ou DELETE nesses 38 cenários.
+- Nenhuma exceção JavaScript na execução aprovada.
+- Cinco verificações anteriores de auditoria e painel também aprovadas.
+Os testes usam eventos no DOM do Chrome e verificam visibilidade dos
+botões públicos Cancelar; não são uma auditoria completa de acessibilidade.
+
+CONFERÊNCIA MANUAL
+Abrir http://127.0.0.1:8080/pages/projetos.html e atualizar com Ctrl+F5.
+Abrir um modal, preencher parcialmente e clicar Cancelar. Reabrir para
+conferir o descarte dos campos. No perfil, os dados salvos reaparecem
+ao reabrir. A publicação depende da validação desta etapa local.

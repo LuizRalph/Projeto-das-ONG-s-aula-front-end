@@ -1,0 +1,22 @@
+const assert=require('node:assert/strict');const pause=ms=>new Promise(r=>setTimeout(r,ms));
+module.exports=async(c,base)=>{
+ await c.send('Page.navigate',{url:base+'/dashboard/projetos.html'});await pause(1300);
+ assert.equal(await c.evaluate(`!document.querySelector('#segments-panel').hidden`),true);
+ await c.evaluate(`document.querySelector('#segments-panel').open=false`);
+ assert.equal(await c.evaluate(`document.querySelector('#segments-panel').getBoundingClientRect().height<150`),true);
+ await c.evaluate(`document.querySelector('#segments-panel > summary').click()`);
+ assert.equal(await c.evaluate(`document.querySelector('#segments-panel').open&&document.querySelector('#segment-name').getClientRects().length>0`),true);
+ await c.evaluate(`const f=document.querySelector('#segment-form');f.elements.nome.value='Segmento navegador '+Date.now();window.segmentTestName=f.elements.nome.value;f.requestSubmit()`);await pause(800);
+ assert.equal(await c.evaluate(`document.querySelector('#segments-list').textContent.includes(window.segmentTestName)`),true);
+ await c.evaluate(`document.querySelector('#create-project').click()`);
+ assert.equal(await c.evaluate(`document.querySelector('#mvp-categoria').tagName`),'SELECT');
+ assert.equal(await c.evaluate(`[...document.querySelector('#mvp-categoria').options].some(o=>o.textContent===window.segmentTestName)`),true);
+ console.log('PASS administrador cria segmento e seleção do projeto atualiza');
+ await c.evaluate(`apiRequest('logout','POST').then(()=>{sessionState=null})`);
+ await c.evaluate(`apiRequest('login','POST',{email:'ong@example.com',senha:'SenhaFicticia123!'}).then(()=>{sessionState=null})`);
+ await c.send('Page.navigate',{url:base+'/dashboard/projetos.html'});await pause(1300);
+ assert.equal(await c.evaluate(`document.querySelector('#segments-panel').hidden`),true);
+ await c.evaluate(`document.querySelector('#create-project').click()`);
+ assert.equal(await c.evaluate(`document.querySelector('#mvp-categoria').options.length>1`),true);
+ console.log('PASS responsável da ONG seleciona segmentos sem acesso ao gerenciamento');
+};

@@ -1,0 +1,11 @@
+/config/database.php
+/.runtime/
+/storage/
+/logs/
+/database/sessions/
+/.vscode/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example

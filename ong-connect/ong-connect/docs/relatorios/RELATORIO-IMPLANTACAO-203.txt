@@ -1,0 +1,363 @@
+﻿RELATÓRIO FINAL DE IMPLANTAÇÃO — ONG CONNECT
+Data: 23/10/2026 — America/Sao_Paulo
+Resultado: aplicação e banco publicados; verificações descritas abaixo aprovadas.
+
+1. DESTINO E PROTOCOLO
+Documento consultado: Relatorio_Acessos_Servidor_203.pdf (4 páginas).
+Servidor: 192.168.120.203; SSH administrativo na porta 2223.
+URL interna: http://192.168.120.203:1645/
+URL por hostname: http://flexit.ddns.com.br:1645/
+Ambas responderam HTTP 200 na rede atual. O acesso pelo hostname foi
+verificado nesta LAN; não houve sonda externa independente nesta execução.
+A credencial fornecida foi usada para autenticação SSH e não está neste relatório.
+
+2. AMBIENTE REAL VERIFICADO
+PHP CLI 8.4.27; Apache com php_module, PDO MySQL, mbstring e sessões funcionais.
+MariaDB 10.6.23. O PDF mencionava PHP 8.1.2, mas a inspeção identificou
+uma versão mais recente. Não foi necessário alterar a sintaxe da aplicação.
+Apache, MariaDB, SSH e vsftpd ativos após a implantação.
+MariaDB escutando somente em 127.0.0.1:3306.
+
+3. PRESERVAÇÃO E PUBLICAÇÃO
+Antes da publicação, o servidor tinha apenas a página de ambiente preparado
+e os bancos de sistema. Nenhum banco de aplicação existente foi substituído.
+Backup privado: /root/ongconnect-backup-20261023-205726/
+Conteúdo: html/ anterior, flexit.conf e published.sql da carga transferida.
+O snapshot referido no PDF não foi acionado nem recriado nesta execução.
+Arquivos públicos enviados para /var/www/html.
+Configuração privada: /var/www/config/database.php.
+Esquema e scripts administrativos: /var/www/database e /var/www/scripts.
+Link /var/www/ong-connect -> html criado para preservar os caminhos relativos
+dos scripts CLI existentes. O DocumentRoot e a porta do Apache foram preservados.
+Permissões públicas: proprietário ftpuser, grupo www-data, pastas 2750,
+arquivos 640. Diretórios privados root:www-data, pastas 750 e arquivos 640.
+Sintaxe Apache aprovada e serviço recarregado.
+
+4. BANCO PUBLICADO E ADEQUAÇÕES
+Exportação consistente do banco local ong_connect por mariadb-dump,
+com --single-transaction, seguida de importação no MariaDB do destino.
+Banco criado com utf8mb4 e collation utf8mb4_unicode_ci.
+Usuário exclusivo: ong_connect_app@127.0.0.1, com senha aleatória privada.
+Permissões da aplicação: SELECT, INSERT, UPDATE e DELETE apenas em ong_connect.
+A conta não tem privilégios administrativos nem de criação de tabelas.
+Configuração PHP no destino ajustada para host 127.0.0.1, porta 3306,
+banco ong_connect e usuário exclusivo. O ambiente local na porta 3308
+foi preservado. Nenhuma senha foi colocada na raiz pública.
+As migrações 001_shared.sql e 002_legacy_schedule.sql já estavam aplicadas
+na origem e foram preservadas; não houve necessidade de reaplicar o esquema.
+A conta admin@example.com e seu hash de senha foram preservados da origem.
+A senha administrativa do sistema não foi redefinida.
+
+5. DADOS CONFERIDOS APÓS A LIMPEZA DOS TESTES
+ONGs: 12; projetos: 17; oportunidades: 17; solicitações de ONGs: 13;
+usuários: 1; candidaturas: 0; doações: 0.
+Os números são idênticos aos do banco local.
+A comparação integral e ordenada dos dados aprovou as 13 tabelas:
+auditoria, candidaturas, doacoes, historico_candidaturas,
+historico_solicitacoes, mvp_lock, ongs, oportunidades, projetos,
+schema_migrations, solicitacoes_ongs, usuarios e usuarios_ongs.
+Comparação executada com UTC e utf8mb4 em ambos os clientes, preservando
+acentos, emojis, datas e hashes. login_tentativas não entrou na comparação
+integral por ser uma tabela operacional alterada pelos testes de login.
+
+6. VERIFICAÇÕES E RESULTADOS
+- Sintaxe local de 15 arquivos PHP: aprovada em PHP 8.5.12.
+- Sintaxe remota de 13 arquivos da API e scripts: aprovada em PHP 8.4.27.
+- scripts/check-upgrade.php no destino: agendas válidas.
+- Catálogo via Apache/API: HTTP 200; 12 ONGs, 17 projetos, 17 oportunidades.
+- Consulta administrativa anônima: bloqueada com HTTP 401.
+- Escrita sem token CSRF: bloqueada com HTTP 403.
+- Cadastro e login de voluntário temporário: aprovados.
+- Cookie de sessão e identificação do usuário entre requisições: aprovados.
+- Consulta administrativa por voluntário: bloqueada com HTTP 403.
+- Consulta autenticada de doações: aprovada.
+- Gravação, leitura e cancelamento de doação simulada: aprovados.
+- Logout e encerramento da sessão: aprovados.
+- Páginas inicial, login e painel: HTTP 200.
+- Configuração, SQL, instalador e caminho .runtime por HTTP: inacessíveis.
+- Log de erro do vhost ao final: sem registros apresentados.
+- Comparação integral das 13 tabelas mencionadas: aprovada.
+As contas temporárias e a doação de teste foram removidas do banco.
+O pacote de transferência em /tmp foi removido após a implantação.
+A área de preparação /var/tmp/ongconnect-stage.5WrDYI permanece privada,
+acessível apenas a root, para diagnóstico; a cópia operacional está no backup.
+Ferramentas locais e exportação estão em .runtime e não foram publicadas.
+
+7. LIMITES E OPERAÇÃO
+Não foi executada auditoria visual em navegador nem teste completo de todos
+os fluxos de aprovação, fila ou concorrência. O login administrativo não foi
+exercitado; a conta e seu hash foram conferidos como idênticos aos da origem.
+O sistema continua em HTTP, conforme o protocolo; HTTPS não foi configurado.
+Novas migrações devem ser aplicadas administrativamente, pois o usuário de
+execução da aplicação não possui permissão DDL. Não foi configurada rotina
+periódica de backup. O backup desta implantação permanece privado no servidor.
+
+8. CONCLUSÃO
+Publicação concluída. A aplicação atende no endereço interno e no hostname,
+consulta o banco do servidor e passou nos testes HTTP de autenticação,
+autorização, proteção CSRF e persistência descritos. Os dados da origem
+foram preservados e os registros de teste foram removidos.
+
+9. REVISÃO APÓS RELATO DE PÁGINA ANTIGA — 23/10/2026
+O usuário informou que ainda via o aviso de ambiente pronto para publicação.
+As consultas HTTP atuais retornaram a página ONG Connect, e não o aviso.
+A causa específica no navegador do usuário não foi comprovada; cache de uma
+versão anterior é uma hipótese compatível com a diferença observada.
+Foi habilitado mod_headers e criada a configuração privada do Apache
+/etc/apache2/conf-available/ong-connect-cache.conf, com Cache-Control:
+no-cache, must-revalidate para HTML. A data de modificação de index.html
+foi atualizada para evitar respostas 304 com base numa versão antiga.
+Sintaxe Apache validada e recarga realizada. Os dois endereços responderam
+HTTP 200 com o novo cabeçalho, inclusive com parâmetro de versão.
+Também foi executado teste real no Chrome sem interface: página inicial
+pelo IP e hostname renderizou 12 cartões, e a página de projetos renderizou
+17 cartões, sem erros JavaScript, de rede ou de carregamento de dados.
+Capturas locais: .runtime/server203-lan.png, server203-public.png e
+server203-projects.png. A ressalva anterior sobre ausência de verificação
+em navegador foi superada para essas três páginas; não representa uma
+auditoria visual completa de todos os fluxos.
+Endereço para contornar cópias antigas:
+http://192.168.120.203:1645/?v=20261023-ongconnect
+
+10. VERIFICAÇÃO DO ACESSO EXTERNO E NETHSECURITY — 23/10/2026
+Acesso administrativo autorizado ao roteador 192.168.120.1:2222,
+usuário root. Plataforma identificada: NethSecurity 8.8.0.
+DNS local e consulta ao resolvedor 1.1.1.1: flexit.ddns.com.br aponta
+para 189.68.255.76, mesmo IPv4 da WAN PPPoE ativa.
+
+REDIRECIONAMENTO E BLOQUEIOS
+Configuração UCI e regras nftables ativas confirmam TCP WAN 1645 ->
+192.168.120.203:1645, habilitado, com destino LAN e reflexão NAT.
+A cadeia forward_wan aceita conexões com estado DNAT.
+O contador do redirecionamento estava em 75 pacotes ao fim da inspeção.
+fw4 check: ruleset aprovado. Existem avisos preexistentes sobre opções
+não reconhecidas e include /etc/firewall.user ausente; não impediram
+o redirecionamento e não foram alterados por estarem fora desta falha.
+BanIP ativo; conjuntos de bloqueio consultados vazios. Não foram
+localizados registros DPT=1645 nos logs de bloqueio consultados.
+Não foi necessário alterar regras nem desabilitar proteção no roteador.
+
+VALIDAÇÃO EXTERNA INDEPENDENTE
+Sondas Globalping, em 23/10/2026 às 21:09:32 de Brasília:
+- São Paulo/BR, Oracle: HTTP 200, conteúdo ONG Connect, 127 ms.
+- Buffalo/EUA, HostPapa: HTTP 200, conteúdo ONG Connect, 435 ms.
+Ambas resolveram 189.68.255.76, usaram HTTP na porta 1645 e receberam
+o cabeçalho Cache-Control: no-cache, must-revalidate.
+As requisições foram confirmadas no log de acesso do próprio servidor.
+Evidência: https://api.globalping.io/v1/measurements/2Hh02PKSaFZ1oS4ho00021N9d
+Cópia JSON no roteador: /tmp/ongconnect203-globalping-final.json.
+Os resultados públicos da API podem expirar; a cópia no roteador é temporária.
+Uma sondagem inicial usou a query dentro do campo path e recebeu 404;
+foi descartada e substituída pela sondagem correta identificada acima.
+
+ACHADO RELACIONADO À FALHA RELATADA
+Entre 21:09:18 e 21:09:20, o Apache registrou tentativas externas com
+handshake TLS na porta HTTP, retornando HTTP 400. Isso demonstra que
+essas conexões chegaram ao servidor e usaram um protocolo incompatível.
+HTTPS não está habilitado na porta 1645. A associação dessas tentativas
+à sessão do usuário ainda depende de confirmação; não há evidência de
+bloqueio geral do acesso externo nos testes executados.
+Foi perguntado ao usuário se o navegador altera o endereço para HTTPS
+ou apresenta ERR_SSL_PROTOCOL_ERROR.
+
+RESULTADO
+Publicação externa por HTTP confirmada independentemente a partir de
+Brasil e EUA. NAT e encaminhamento funcionais no momento da inspeção.
+Se o navegador promover a URL para HTTPS, será necessário usar HTTP
+explicitamente ou configurar uma publicação HTTPS adequada como nova etapa.
+Evidência JSON também preservada localmente em .runtime/globalping203-result.json.
+
+11. SINCRONIZAÇÃO AUTORIZADA — 24/10/2026
+Publicados os ajustes locais de modelagem: controle_cnpj, histórico
+permanente de rejeições, bloqueio após três decisões e auditoria ampliada.
+Arquivos da aplicação, scripts e migrações sincronizados. A configuração
+privada de conexão do servidor foi preservada. O banco local não foi
+importado; os registros atuais do servidor foram mantidos.
+Backup remoto: /root/ongconnect-sync-20261024-220226/
+Inclui html, config, database, scripts e database.sql anteriores.
+A migração 003_cnpj_audit.sql foi executada primeiro em uma cópia temporária
+do banco remoto, no MariaDB real do destino, com sucesso. A cópia de teste
+foi removida e a mesma migração aplicada ao banco ong_connect.
+Após a migração: 13 ONGs, 18 projetos, duas contas e 12 controles de CNPJ.
+Sintaxe dos 16 arquivos PHP da API/scripts aprovada no destino.
+Agendas verificadas, configuração Apache aprovada e serviço recarregado.
+Página inicial e catálogo HTTP 200. Tela de auditoria HTTP 200 por IP e
+hostname público a partir da rede de execução. Consulta da API de auditoria
+sem autenticação respondeu 401, conforme esperado. Log do vhost sem
+registros apresentados na verificação final.
+Não foram criados usuários nem registros financeiros de teste no banco
+publicado. O teste de tela autenticada foi executado na etapa local;
+não foi repetido com credenciais de usuário real no servidor.
+README e documentação técnica atualizados para indicar a publicação.
+As correções de interação dos popups continuam fora desta etapa.
+
+12. SINCRONIZAÇÃO DO CONTEÚDO E INTERFACE — 24/10/2026
+Publicados os ajustes locais de cancelamento de modais, cartões mobile,
+resumos e alinhamento no desktop, Saiba mais com descrição integral,
+navegação para o projeto escolhido e cadastro com cinco campos detalhados.
+Backup prévio: /root/ongconnect-sync-20261024-224349/
+Preservados arquivos públicos, configuração privada, scripts, esquema e
+exportação completa do banco remoto em database.sql.
+Migração 004 e atualização editorial testadas primeiro numa cópia do
+banco remoto. Após aprovação, aplicadas ao banco real, sem importar o
+banco local e sem substituir contas, oportunidades, candidaturas ou apoios.
+Atualizados somente os seis campos textuais dos 17 projetos correspondentes
+à fonte revisada. O projeto adicional de ID 19 foi preservado integralmente.
+IDs, títulos, vínculos, metas, valores, status, imagens e datas foram
+comparados antes/depois na transação e permaneceram inalterados.
+Total no servidor: 18 projetos; 17 com os cinco novos campos preenchidos.
+O projeto adicional continua com seu conteúdo original.
+Os eventos de atualização editorial foram registrados na auditoria.
+Verificações: sintaxe PHP aprovada, agendas válidas, Apache configtest
+aprovado, serviço recarregado, catálogo e páginas ONGs/Projetos HTTP 200.
+A API foi comparada com a fonte local nos seis campos dos 17 projetos:
+conteúdo idêntico. Conferidos 118 arquivos por SHA-256, sem divergências.
+Documentação publicada com o estado atualizado.
+Os testes completos de interface foram executados localmente nas etapas
+anteriores; nesta publicação foram conferidos API, arquivos e respostas
+HTTP, sem novas operações financeiras nem contas fictícias no banco real.
+URLs: http://192.168.120.203:1645/pages/projetos.html
+      http://flexit.ddns.com.br:1645/pages/projetos.html
+Atualizar o navegador com Ctrl+F5 para carregar os arquivos novos.
+
+13. SINCRONIZAÇÃO DO MÓDULO FINANCEIRO — 24/10/2026
+Publicação autorizada do projeto local com repasses públicos, documentos
+privados, prestação de contas, relatório CSV, total público agregado,
+separação dos apoios privados e fechamento do menu ao clicar fora.
+Backup prévio: /root/ongconnect-sync-20261024-233921/
+Preservados arquivos da aplicação, configuração privada e exportação SQL.
+A rotina também preserva storage quando já existe no destino.
+
+MIGRAÇÃO E DADOS
+Migração 005_public_transfers.sql aplicada primeiro em cópia do banco
+remoto, seguida da carga financeira; uma segunda execução inseriu zero
+registros. Depois, o procedimento foi aplicado ao banco do site.
+Sincronizados 11 registros demonstrativos: seis apoios privados válidos
+somando R$ 6.000, três repasses públicos válidos somando R$ 30.000,
+um apoio privado cancelado de R$ 500 e um repasse público cancelado
+de R$ 5.000. Os cancelados não entram nos totais publicados.
+As contas foram mapeadas por e-mail para atribuir corretamente a autoria,
+sem copiar senhas nem substituir os usuários do destino.
+As duas contas, os 18 projetos e os demais cadastros existentes foram
+preservados. Os 17 projetos editoriais já estavam atualizados; a carga
+não alterou seus textos nem o projeto exclusivo do servidor.
+Não havia documentos locais de repasses para transferir.
+
+ARMAZENAMENTO PRIVADO
+Criado /var/www/storage/repasses-publicos/ong_connect fora do DocumentRoot,
+com permissão de escrita conferida para www-data. Extensão fileinfo
+verificada em PHP CLI no servidor. Nenhum diretório de anexos foi
+publicado na raiz HTTP e nenhum arquivo existente foi sobrescrito.
+
+VERIFICAÇÕES
+Sintaxe dos 19 arquivos PHP da API/scripts aprovada no servidor.
+Migração e carga testadas no MariaDB real por meio de uma cópia do banco.
+Agendas válidas, Apache configtest aprovado e serviço recarregado.
+Páginas Transparência e Repasses públicos: HTTP 200 por IP e hostname.
+API pública: R$ 30.000; soma dos apoios privados válidos: R$ 6.000,
+conferidos pelos dois endereços. Consulta privada sem login: HTTP 401.
+Conferidos 127 arquivos por SHA-256: nenhuma divergência.
+Log de erro do vhost sem registros apresentados ao final.
+Documentação publicada com o novo estado.
+Os 36 testes de integração e o fluxo de navegador foram realizados na
+etapa local. Nesta publicação não foram criados usuários de teste nem
+enviados documentos adicionais ao banco real para validar upload.
+
+ACESSO
+Transparência: http://flexit.ddns.com.br:1645/pages/transparencia.html
+Administração: http://flexit.ddns.com.br:1645/dashboard/repasses-publicos.html
+Atualizar com Ctrl+F5. Todos os valores continuam simulados.
+SINCRONIZACAO - 25/10/2026
+Alteracoes de acesso do voluntario, modais, cadastro completo e acentos publicadas.
+Migracao 006_volunteer_profile.sql validada em copia do banco remoto e aplicada.
+Dados existentes preservados: 2 usuarios e 18 projetos. Banco local nao substituiu o remoto.
+Backup completo: /root/ongconnect-sync-20261025-010824/
+36 verificacoes de integracao locais aprovadas.
+129 arquivos conferidos por SHA-256, sem divergencias.
+Apache: Syntax OK. Pagina de projetos, JavaScript e sessao: HTTP 200 em ambos os enderecos.
+Interno: http://192.168.120.203:1645/
+Dominio: http://flexit.ddns.com.br:1645/
+Verificado UTF-8 nos textos de disponibilidade servidos pelo servidor.
+
+SINCRONIZACAO - 26/10/2026
+Publicados: segmentos administrados pelo administrador geral, selecao no
+cadastro de projetos, indicador existente com linha de recursos publicos,
+menus e icones de repasses e auditoria, fechamento externo do menu mobile.
+Backup: /root/ongconnect-sync-20261026-154153/
+Migracao 007_segments.sql validada na copia do banco remoto e aplicada.
+Preservados 2 usuarios e 18 projetos; 10 segmentos e todos os projetos vinculados.
+135 arquivos conferidos por SHA-256 sem divergencias. Apache: Syntax OK.
+HTTP 200 em repasses, auditoria, transparencia e catalogo nos dois enderecos.
+Validacoes locais anteriores: 38 testes de integracao e testes de navegador.
+Banco local nao substituiu o banco remoto. Credenciais e documentos preservados.
+
+26/10/2026 - Correcao de duplicacao do menu em Repasses e Auditoria.
+Removidos links estaticos redundantes; menu centralizado no navigation.js,
+com deduplicacao por destino e versao para invalidar cache nas paginas do painel.
+Teste Chrome desktop/mobile aprovado. Publicacao: 135 arquivos identicos.
+Backup: /root/ongconnect-sync-20261026-154428/. Dados existentes preservados.
+
+26/10/2026 - Sincronizacao: segmentos retrateis e cabecalhos fixos.
+Publicado acordeao de segmentos no padrao de Solicitacoes de cadastro.
+Cabecalho sticky nas oito telas administrativas, ajustado para desktop/mobile.
+CSS versionado para evitar estilo antigo em cache.
+Backup: /root/ongconnect-sync-20261026-160029/
+135 arquivos conferidos por hash, sem divergencias. Apache: Syntax OK.
+HTTP 200 e markup/CSS conferidos no IP interno e no dominio.
+Preservados os dados remotos: 2 usuarios e 18 projetos.
+
+26/10/2026 - Publicacao da escala tipografica e alinhamento do cabecalho.
+Fontes padronizadas entre paginas publicas e painel; cabecalho sem deslocamento
+inicial, com espacamento vertical uniforme. CSS versionado type2 no painel.
+Backup: /root/ongconnect-sync-20261026-161028/
+135 arquivos conferidos por SHA-256 sem divergencias. Apache Syntax OK.
+HTML e CSS publicados verificados no dominio e IP interno, HTTP 200.
+Dados remotos preservados: 2 usuarios e 18 projetos.
+
+26/10/2026 - Padronizacao do menu lateral publicada.
+Fonte, peso, tamanho e espacamentos uniformes; oito icones SVG com traco comum.
+Contadores e permissoes preservados. HTML com versao menu3 para CSS e JS.
+Backup: /root/ongconnect-sync-20261026-161635/
+135 arquivos conferidos por SHA-256 sem divergencias. Apache Syntax OK.
+Paginas e recursos conferidos via IP interno e dominio. Dados remotos preservados.
+
+26/10/2026 - Reorganizacao de Relatorios, Repasses e Auditoria publicada.
+Relatorios consolidados por tipo, periodo e ONG, com CSV da consulta.
+Repasses com listagem, filtros, resumo de pendencias e cadastro/edicao em modal.
+Auditoria com nomes legiveis, filtros e detalhes tecnicos em modal.
+Backup: /root/ongconnect-sync-20261026-165326/
+139 arquivos conferidos por SHA-256, sem divergencias. Apache Syntax OK.
+HTTP 200 nas tres telas no IP interno e dominio; APIs privadas recusam
+acesso anonimo com HTTP 401. Versoes de CSS/JS workflows1 confirmadas.
+Dados remotos preservados: 2 usuarios e 18 projetos. Sem nova migracao.
+Validacao local anterior: 42 testes de integracao, Chrome desktop/mobile,
+CSV, documentos, prestacao de contas, cancelamento e isolamento por ONG.
+
+26/10/2026 - Removidos os icones dos titulos de Auditoria e Repasses Publicos.
+Menu lateral preservado. Backup: /root/ongconnect-sync-20261026-165802/
+139 arquivos conferidos sem divergencias. Apache Syntax OK.
+HTML das duas telas verificado no IP e dominio: HTTP 200 e sem icone no titulo.
+Dados existentes preservados.
+
+26/10/2026 - Sincronizacao dos arquivos atuais apos a varredura de desempenho.
+Backup: /root/ongconnect-sync-20261026-172701/
+Arquivos conferidos por SHA-256 sem divergencias. Apache Syntax OK.
+Paginas e catalogo HTTP 200 no IP interno e dominio. Dados existentes preservados.
+Otimizacoes de desempenho ainda nao implementadas; sem melhoria de latencia
+atribuida a esta sincronizacao. Diagnostico permanece no relatorio local.
+
+26/10/2026 - Tentativa de sincronizacao exclusivamente documental.
+Pacote .runtime/docs203.tar.gz preparado com 37 arquivos e manifesto SHA-256.
+Inclui README, changelog, documentacao, integrantes/RGMs e script academico.
+Nao inclui paginas HTML, assets, API ou SQL. Nenhuma migracao foi executada.
+Conexao SSH interna expirou; tentativa pelo dominio nao completou negociacao.
+Nenhum arquivo foi transferido ou alterado no servidor nesta tentativa.
+Sincronizacao pendente de restabelecimento do acesso remoto.
+
+26/10/2026 - Nova tentativa de sincronizacao documental a pedido do usuario.
+SSH interno 192.168.120.203:2223: timeout antes da autenticacao.
+SSH pelo dominio flexit.ddns.com.br:2223: sessao nao estabelecida,
+com falha na leitura/negociacao do protocolo SSH (No existing session).
+Preparado procedimento restrito a documentos e script academico, com backup
+por arquivo e verificacao de que paginas/API/assets permanecem inalterados.
+Nenhum upload ou comando de alteracao remota foi executado. Publicacao pendente.

@@ -1,105 +1,89 @@
-# ONG Connect
+# ONG Connect — projeto acadêmico de banco de dados
 
-**Projeto acadêmico de desenvolvimento web — versão demonstrativa**
+Documentação consolidada em **26/10/2026**. Aplicação demonstrativa em HTML, CSS, JavaScript, PHP/PDO e MariaDB. ONGs, pessoas e valores usados na demonstração são fictícios; a plataforma não movimenta dinheiro.
 
-ONG Connect é um portal fictício que conecta organizações não governamentais, projetos sociais, voluntários e apoiadores. Foi desenvolvido para demonstrar conceitos de HTML5, CSS3 e JavaScript, com dados iniciais em JSON e persistência no `localStorage` do navegador.
+## Trabalho da disciplina
 
-> **Importante:** o projeto não é um serviço em produção. Doações, acesso de usuários, dados financeiros e processos administrativos são simulados. Utilize apenas dados fictícios.
+**Tema proposto pelo grupo nesta revisão:** modelagem híbrida relacional e documental com JSON no MariaDB. O estudo investiga a combinação de relacionamentos e transações com atributos semiestruturados, em comparação com uma representação relacional de colunas e tabelas de associação.
 
-## Objetivo do trabalho
-Demonstrar uma aplicação web responsiva com catálogos, formulários, validação, modais, filtros, cadastros, fluxos de aprovação, armazenamento local, indicadores e relatórios. Consulte [Visão geral](docs/01-VISAO-GERAL.md).
+O PDF da disciplina solicita pesquisa bibliográfica/técnica, análise crítica, aplicação prática com diagrama entidade-relacionamento, comparação tradicional e apresentação dos resultados. A entrega está organizada em:
 
-## Como executar
-1. Abra a pasta `ong-connect` no **Visual Studio Code**.
-2. Utilize a extensão **Live Server** e escolha **Open with Live Server** em `index.html`.
-3. Navegue pelo menu do portal. Para acessar os módulos administrativos, abra `dashboard/index.html`.
-4. Utilize sempre a mesma origem/porta para conservar os registros de `localStorage`.
+1. [Relatório acadêmico: problema, fundamentação, comparação e conclusão](docs/academico/RELATORIO-ACADEMICO.md).
+2. [Experimento reproduzível e resultados medidos](docs/academico/EXPERIMENTO.md).
+3. [Modelo atual, relacionamentos e dicionário de dados](docs/09-ESTRUTURA-DE-DADOS.md).
+4. [Fontes bibliográficas e técnicas](docs/academico/REFERENCIAS.md).
+5. [Roteiro de apresentação e demonstração](docs/academico/APRESENTACAO.md).
+6. [Matriz de conformidade e pendências da entrega](docs/academico/MATRIZ-CONFORMIDADE.md).
 
-**Requisitos:** navegador moderno, VS Code e Live Server (ou outro servidor HTTP estático). Não é necessário PHP, banco de dados, `npm` ou instalação de bibliotecas.
+**Delimitação:** JSON e MariaDB são tecnologias maduras. O recorte é uma aplicação de gestão de dados heterogêneos, associada à discussão sobre bancos multimodelo; não se afirma que usar JSON transforme o MariaDB em uma tecnologia recém-criada. O grupo informou que ainda não havia tema definido. A aceitação desse recorte no requisito “tecnologia emergente” depende do professor. Não foi declarada aprovação acadêmica automática.
 
-**Por que não abrir com duplo clique?** A leitura dos arquivos JSON utiliza `fetch`, que pode falhar no protocolo `file://`.
+Segundo o PDF fornecido, a apresentação é em **27/10/2026**, com grupos de até **sete pessoas**, e envio ao endereço informado no enunciado. O grupo possui os sete integrantes identificados abaixo; turma/instituição e envio ainda devem ser completados pelo grupo. Nenhum e-mail foi enviado por esta atualização. A loja virtual da segunda página é identificada como exemplo de domínio; aqui a demonstração utiliza ONGs.
 
-## Funcionalidades demonstradas
-- **Home:** carrosséis de ONGs e projetos, modais e solicitação de cadastro de ONG.
-- **ONGs:** catálogo, detalhes institucionais e projetos vinculados.
-- **Projetos:** catálogo, detalhes, apoio fictício e oportunidades de voluntariado.
-- **Transparência:** indicadores, origem demonstrativa dos recursos, distribuição por área e informações institucionais.
-- **Administração:** dashboard, análise de ONGs, cadastro e edição de projetos, voluntários, doações e relatórios CSV.
-- **Cadastro institucional:** solicitação, pré-aprovação, complementação, rascunho, revisão e publicação.
-- **Notificações:** contador vermelho para pedidos pendentes e laranja para pré-aprovados ainda não concluídos.
+### Integrantes
 
-## Documentação completa
-| Documento | Assunto |
+| Nome | RGM |
 |---|---|
-| [01 — Visão geral do projeto](docs/01-VISAO-GERAL.md) | Funcionamento e explicações do tema |
-| [02 — Arquitetura e organização do código](docs/02-ARQUITETURA.md) | Funcionamento e explicações do tema |
-| [03 — Páginas públicas](docs/03-PAGINAS-PUBLICAS.md) | Funcionamento e explicações do tema |
-| [04 — Painel administrativo](docs/04-PAINEL-ADMINISTRATIVO.md) | Funcionamento e explicações do tema |
-| [05 — Cadastro de ONGs: fluxo completo](docs/05-CADASTRO-DE-ONGS.md) | Funcionamento e explicações do tema |
-| [06 — Projetos e doações simuladas](docs/06-PROJETOS-E-DOACOES.md) | Funcionamento e explicações do tema |
-| [07 — Voluntariado](docs/07-VOLUNTARIADO.md) | Funcionamento e explicações do tema |
-| [08 — Transparência e indicadores](docs/08-TRANSPARENCIA.md) | Funcionamento e explicações do tema |
-| [09 — Dados e persistência](docs/09-ESTRUTURA-DE-DADOS.md) | Funcionamento e explicações do tema |
-| [10 — Roteiro de testes e apresentação acadêmica](docs/10-TESTES-E-DEMONSTRACAO.md) | Funcionamento e explicações do tema |
-| [11 — Limitações e decisões de escopo](docs/11-LIMITACOES.md) | Funcionamento e explicações do tema |
-| [12 — Possibilidades de evolução futura](docs/12-EVOLUCOES.md) | Funcionamento e explicações do tema |
+| Daniel Costa Ferreira | 048098108 |
+| Daniel Paulino | 048711152 |
+| Dioni Alves Moreira | 047399112 |
+| Igor Roehr lúcio de Godoy Strauss | 5947848251 |
+| Luiz Carlos Domeneguetti Lourenção | 047147695 |
+| Luiz Paulo Gomes do Prado e Silva | 048424170 |
+| Raphael Vital | 047147768 |
 
-### Referências técnicas complementares
-- [Fluxos atuais](docs/FLUXOS_ATUAIS.md)
-- [Auditoria estática e componentes legados](docs/AUDITORIA_E_LIMPEZA.md)
-- [Arquitetura técnica resumida](docs/arquitetura.md)
-- [Requisitos](docs/requisitos.md)
-- [Casos de uso](docs/casos-de-uso.md)
-- [Histórico de alterações](CHANGELOG.md)
+## Funcionalidades atuais
 
-Os documentos `docs/HISTORICO_E_REGRAS_DE_NEGOCIO.md` e `docs/PROMPT_MESTRE_CODEX.md` são referências históricas e podem mencionar versões antigas; **não substituem a documentação atual**.
+- Catálogo público de ONGs, projetos, oportunidades e transparência.
+- Login real com sessão PHP, hash de senha, CSRF e autorização por perfil/vínculo.
+- Revisão de solicitações de ONG, controle permanente de CNPJ e histórico.
+- Projetos com descrições completas e segmentos gerenciados pelo administrador geral.
+- Candidaturas compartilhadas, conflito de agenda, fila e histórico de decisões.
+- Apoios privados simulados separados dos repasses públicos recebidos.
+- Repasses com documentos privados e situação da prestação de contas.
+- Relatórios financeiros, de projetos e voluntariado por período e ONG, com CSV.
+- Auditoria restrita ao administrador geral, com filtros e detalhes técnicos.
 
-## Estrutura simplificada
-```text
-ong-connect/
-├── index.html
-├── pages/              # Páginas públicas e complementação
-├── dashboard/          # Painel administrativo demonstrativo
-├── assets/css/         # Estilos
-├── assets/js/          # Lógica do navegador
-├── data/               # Dados iniciais fictícios em JSON
-├── docs/               # Documentação acadêmica e técnica
-├── CHANGELOG.md
-└── README.md
+## Persistência e permissões
+
+| Local | Conteúdo atual |
+|---|---|
+| MariaDB | Contas, vínculos, ONGs, segmentos, projetos, vagas, candidaturas, históricos, doações, repasses, metadados de documentos e auditoria |
+| Armazenamento privado fora da raiz pública | Arquivos dos documentos de repasses |
+| localStorage | Preferências de foto e visualização; dados antigos não são a fonte dos cadastros atuais |
+| sessionStorage | Filtros e estado de navegação da aba |
+
+Administrador geral gerencia o sistema, segmentos e auditoria. Responsável por ONG administra somente organizações vinculadas. Voluntário acompanha seu perfil, candidaturas e simulações. As restrições são verificadas na API, não apenas no menu.
+
+## Instalação e reprodução
+
+Execute na **pasta externa** que contém `config/`, `database/`, `scripts/` e a pasta pública `ong-connect/`:
+
+1. Disponibilize PHP com `pdo_mysql`, `mbstring` e `fileinfo`, e MariaDB/InnoDB/utf8mb4. Ambientes observados: PHP 8.5.12 + MariaDB 11.4.5 local; PHP 8.4 + MariaDB 10.6 no servidor. Isso não equivale a homologação de qualquer combinação de versões.
+2. Crie o banco e configure `config/database.php` a partir de `config/database.example.php`, sem versionar credenciais reais.
+3. Execute `php scripts/install.php`. O instalador aplica as migrações e não substitui registros existentes. Para atualizar banco já instalado, faça backup e execute `php scripts/migrate.php`.
+4. Crie uma conta administrativa com `scripts/create-user.php`, fornecendo a senha por `ONG_INITIAL_PASSWORD`; veja [operação](docs/PHP-MARIADB.md).
+5. Sirva somente `ong-connect/`: `php -S 127.0.0.1:8080 -t ong-connect`.
+
+No ambiente portátil já preparado, execute `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local.ps1`. O banco local preparado usa porta 3308; não presuma essa porta em outras instalações. Live Server não executa PHP. A instalação limpa utiliza os JSON iniciais e não copia contas, uploads ou o banco do servidor.
+
+### Verificações
+
+```powershell
+node scripts/test-shared.cjs
+php scripts/academic-json-comparison.php
 ```
 
-## Fluxo de cadastro de ONG (resumo)
-`Pendente → Aprovado → Aguardando complementação → Aguardando revisão → Cadastrada` (com possibilidade de rejeição na análise e salvamento de rascunho). A pré-aprovação **não** publica a organização. Veja [Cadastro de ONGs](docs/05-CADASTRO-DE-ONGS.md).
+O primeiro comando cria um banco isolado e depende do ambiente PHP/MariaDB local configurado nos scripts. O segundo cria apenas tabelas temporárias na conexão configurada; não altera os registros do portal. Para o PHP portátil, veja [experimento](docs/academico/EXPERIMENTO.md). Foram observadas **42 verificações de integração aprovadas** na versão auditada; isso não substitui executar os testes no computador da apresentação.
 
-## Persistência e dados simulados
-Os JSON oferecem registros iniciais; alterações feitas na interface são armazenadas no navegador em chaves `ongconnect_`. Não há sincronização entre computadores. Os valores de arrecadação incluem bases fictícias e contribuições simuladas, não comprovantes financeiros. Veja [Estrutura de dados](docs/09-ESTRUTURA-DE-DADOS.md) e [Limitações](docs/11-LIMITACOES.md).
+## Guia da documentação
 
-## Como apresentar o projeto
-Use o [roteiro de testes e demonstração](docs/10-TESTES-E-DEMONSTRACAO.md) para demonstrar páginas públicas, solicitação e aprovação de ONG, complementação, rascunho, doações fictícias, voluntariado, indicadores e relatórios.
+| Assunto | Documento |
+|---|---|
+| Visão e arquitetura | [01 — Visão geral](docs/01-VISAO-GERAL.md), [02 — Arquitetura](docs/02-ARQUITETURA.md) |
+| Banco, DER e regras | [09 — Estrutura de dados](docs/09-ESTRUTURA-DE-DADOS.md), [Requisitos](docs/requisitos.md), [Casos de uso](docs/casos-de-uso.md) |
+| Instalação e API | [PHP/MariaDB](docs/PHP-MARIADB.md), [Backend compartilhado](docs/BACKEND-COMPARTILHADO.md) |
+| Telas e fluxos | [03 — Público](docs/03-PAGINAS-PUBLICAS.md), [04 — Painel](docs/04-PAINEL-ADMINISTRATIVO.md), [05 — ONGs](docs/05-CADASTRO-DE-ONGS.md), [06 — Projetos](docs/06-PROJETOS-E-DOACOES.md), [07 — Voluntariado](docs/07-VOLUNTARIADO.md), [08 — Transparência](docs/08-TRANSPARENCIA.md) |
+| Testes e limites | [10 — Testes](docs/10-TESTES-E-DEMONSTRACAO.md), [11 — Limitações](docs/11-LIMITACOES.md), [12 — Evoluções](docs/12-EVOLUCOES.md) |
+| Relatórios de implantação e validação | [Relatórios](docs/relatorios/) |
 
-## Estado da revisão
-Documentação alinhada à versão do código disponível em **09/10/2026**. A auditoria foi estática (páginas, scripts e links); **não** substitui testes completos no navegador. Os arquivos de aplicação foram preservados nesta atualização documental.
-
-## Dados fictícios incluídos
-
-A demonstração inicia com **6 ONGs e 17 projetos** cadastrados nos arquivos `data/ongs.json` e `data/projetos.json`. Os registros representam organizações e iniciativas **inteiramente fictícias**; nomes, e-mails, metas, valores arrecadados e número de voluntários são exemplos didáticos.
-
-| ONG fictícia | Projetos |
-|---|---:|
-| Instituto Esperança | 3 |
-| Rede Mãos Solidárias | 3 |
-| Verde Futuro | 3 |
-| Instituto Vida em Movimento | 3 |
-| Associação Patas e Afeto | 2 |
-| Coletivo Cultura Viva | 3 |
-| **Total** | **17** |
-
-A arrecadação inicial de cada projeto é um valor fictício usado para demonstrar gráficos e indicadores; as contribuições simuladas feitas pelo visitante são somadas localmente. Cadastros ou edições antigos armazenados no `localStorage` podem fazer o navegador exibir quantidades ou informações diferentes das originais; para testar os dados-base, utilize uma sessão limpa ou remova os dados locais da origem do projeto.
-
-## Conteúdo fictício ilustrado
-
-A versão acadêmica inclui **6 ONGs e 17 projetos** com ilustrações vetoriais locais em `assets/images/demo/`. Os dados financeiros (metas e arrecadações iniciais) e números de voluntários são fictícios, gerados com semente fixa para manter os mesmos valores em todos os computadores. Não são valores reais. As imagens são ilustrações temáticas, não fotografias das organizações.
-
-## Demonstração em outro computador
-
-Os **6 cadastros de ONGs e 17 projetos**, com imagens e valores fictícios, acompanham o ZIP em `assets/js/demo-data.js` e `assets/images/demo/`. Eles aparecem em uma instalação nova sem copiar dados do navegador anterior. Alterações feitas depois pelo usuário permanecem no `localStorage` do computador de origem. Consulte `docs/DADOS_DEMONSTRACAO_PORTAVEIS.md`.
+Documentos marcados como históricos não definem o comportamento vigente. O estado atual do banco é `database/schema.sql` **mais** as migrações `001` a `007`; o schema inicial isolado não representa toda a aplicação. Esta revisão documental e o experimento são locais; não implicam publicação ou alteração do banco remoto.

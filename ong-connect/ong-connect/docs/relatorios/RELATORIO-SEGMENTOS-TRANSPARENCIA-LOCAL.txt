@@ -1,0 +1,24 @@
+SEGMENTOS E TRANSPARÊNCIA — IMPLEMENTAÇÃO LOCAL
+
+Banco: migração 007_segments.sql cria segmentos e vincula as categorias
+existentes aos projetos. Nenhum cadastro existente foi excluído.
+
+Painel Projetos: seção Segmentos dos projetos exclusiva do administrador
+geral, com criação, edição, ativação e desativação. Nomes duplicados são
+recusados. Renomear atualiza os projetos vinculados. Desativar preserva
+os vínculos existentes e bloqueia novas associações.
+
+Projeto: seleção de segmento cadastrado, com validação no backend.
+Responsáveis por ONG não podem criar ou alterar segmentos.
+
+Transparência: removida a comparação adicional. O quadro existente inclui
+Recursos públicos e segmentos dos apoios privados; percentuais calculados
+sobre o total recebido das duas origens, sem duplicar os valores públicos.
+O resumo Origem dos recursos foi preservado. Sem documentos administrativos
+ou valores previstos na consulta pública.
+
+Validação: 38 verificações de integração aprovadas. Chrome validou criação
+pelo administrador, seleção pela ONG e participação pública com recursos
+mistos, somente privados, somente públicos e valores zerados.
+
+Alterações locais; nenhuma publicação no servidor nesta etapa.
