@@ -53,7 +53,10 @@ try {
     if(in_array($resource,['repasses_publicos','total_repasses_publicos','contexto_repasses_publicos'],true))publicTransfersRoute($db,$resource,$method,$input,(int)$id);
     if($resource==='relatorios')reportsRoute($db,$method);
     if($resource==='segmentos')segmentsRoute($db,$method,$input,(int)$id);
-    if(in_array($resource,['sessao','login','cadastro','logout','perfil','vinculos'],true))authRoute($db,$resource,$method,$input);
+    if(in_array($resource,['sessao','login','cadastro','logout','perfil','vinculos','ativacao','convite'],true))authRoute($db,$resource,$method,$input);
+    if($resource==='solicitacoes'&&$method==='POST'){
+        rateLimit($db,['ong-request:'.clientAddress()=>20],3600);
+    }
     if(in_array($resource,['candidaturas','doacoes'],true)) {
         session_write_close();
         participationRoute($db,$resource,$method,$input,$id);

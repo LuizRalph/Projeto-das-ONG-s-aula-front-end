@@ -19,11 +19,13 @@ const ok=(name)=>{passed++;console.log('PASS '+name)};
 async function main(){
  console.log(run('scripts/prepare-integration.php'));console.log(run('scripts/install.php'));console.log(run('scripts/integration-fixtures.php'));console.log(run('scripts/migrate.php'));
  const snapshot=run('scripts/integration-fixtures.php',['snapshot']);run('scripts/install.php');assert.equal(run('scripts/integration-fixtures.php',['snapshot']),snapshot);ok('reinstalação e migrações preservam dados e métricas legadas');
+ console.log(run('scripts/test-security-p0.php'));
  for(const port of ports){const fd=fs.openSync(path.join(root,`.runtime/shared-${port}.log`),'a');const p=spawn(php,[...args,'-S',`127.0.0.1:${port}`,'-t','ong-connect'],{cwd:root,env,windowsHide:true,stdio:['ignore',fd,fd]});servers.push(p);fs.closeSync(fd);}
  const visitor=new Client();for(let i=0;i<40;i++){try{await visitor.call('sessao');break}catch{await new Promise(r=>setTimeout(r,100))}}
  assert.equal((await visitor.call('solicitacoes')).status,401);assert.equal((await visitor.call('ongs','DELETE',{},1)).status,401);ok('acesso anônimo bloqueado');
  assert.equal((await visitor.call('login','POST',{email:'ausente@example.com',senha:'invalida'})).status,401);ok('login inválido');
  const admin=await new Client().login('admin@example.com'),manager=await new Client().login('ong@example.com'),vol=await new Client().login('voluntario@example.com');
+ assert.equal(run('scripts/security-test-fixtures.php',['hash-version','admin@example.com']),'upgraded');ok('login migra hash legado');
  assert.equal((await admin.call('ongs','DELETE',{},6,false)).status,403);ok('CSRF obrigatório');
  assert.equal((await manager.call('projetos','DELETE',{},4)).status,403);ok('isolamento entre ONGs');
  const fresh=new Client();await fresh.call('sessao');await fresh.call('cadastro','POST',{nome:'Outra Pessoa Fictícia',email:'outra@example.com',senha:'SenhaFicticia123!',perfil:'admin'});await fresh.login('outra@example.com');assert.equal((await fresh.call('sessao')).usuario.perfil,'voluntario');ok('cadastro não eleva privilégios');
@@ -45,11 +47,26 @@ async function main(){
  assert.equal((await vol.call('doacoes','PUT',{status:'Cancelada'},d1.id)).status,200);assert.equal((await visitor.call('catalogo')).projetos.find(p=>p.id===1).arrecadado,0);ok('cancelamento de simulação recalcula total');
  const request={nome:'ONG Fictícia Teste',cnpj:'98765432000100',cidade:'Cidade fictícia',email:'ongteste@example.com',descricao:'Organização fictícia de teste',responsavel:'Pessoa Fictícia',telefone:'11999990000',consentimento:true};
  const r=await visitor.call('solicitacoes','POST',request);assert.equal(r.status,201,JSON.stringify(r));const published=await admin.call('publicar','POST',{...request,categoria:'Educação'},r.id);assert.equal(published.status,200);assert.equal((await admin.call('rejeitar','POST',{motivo:'Teste fictício'},r.id)).status,409);ok('publicação atômica e decisão repetida bloqueada');
- assert.equal(published.acesso.contaCriada,true);assert.ok(published.acesso.senhaInicial.length>=12);
- const ongAdmin=await new Client().login(request.email,published.acesso.senhaInicial);const ongSession=await ongAdmin.call('sessao');assert.equal(ongSession.usuario.perfil,'ong');assert.deepEqual(ongSession.ongs,[published.acesso.ongId]);assert.equal((await ongAdmin.call('projetos','DELETE',{},1)).status,403);ok('aprovação cria credenciais e vínculo com acesso restrito');
- const requestLinked={...request,cnpj:'98765432000102'};const linked=await visitor.call('solicitacoes','POST',requestLinked);const linkedResult=await admin.call('publicar','POST',{...requestLinked,categoria:'Educação'},linked.id);assert.equal(linkedResult.status,200);assert.equal(linkedResult.acesso.contaCriada,false);assert.equal(linkedResult.acesso.senhaInicial,null);await new Client().login(request.email,published.acesso.senhaInicial);ok('responsável existente recebe vínculo sem alteração da senha');
+ assert.equal(published.acesso.contaCriada,true);assert.equal(published.acesso.senhaInicial,undefined);assert.ok(published.acesso.ativacao);
+ const originalToken=new URLSearchParams(published.acesso.ativacao.split('#')[1]).get('token');
+ assert.equal((await visitor.call('convite','POST',{email:request.email})).status,401);
+ assert.equal((await manager.call('convite','POST',{email:request.email})).status,403);
+ const reissued=await admin.call('convite','POST',{email:request.email});assert.equal(reissued.status,200);
+ assert.equal((await visitor.call('ativacao','POST',{token:originalToken,senha:'SenhaFicticia123!'})).status,400);
+ run('scripts/security-test-fixtures.php',['expire-invite',request.email]);
+ const expiredToken=new URLSearchParams(reissued.ativacao.split('#')[1]).get('token');
+ assert.equal((await visitor.call('ativacao','POST',{token:expiredToken,senha:'SenhaFicticia123!'})).status,400);ok('convites expirados e substituídos são rejeitados e reemissão exige administrador');
+ const currentInvite=await admin.call('convite','POST',{email:request.email});
+ const token=new URLSearchParams(currentInvite.ativacao.split('#')[1]).get('token');
+ assert.equal((await visitor.call('ativacao','POST',{token,senha:'SenhaFicticia123!'},undefined,false)).status,403);
+ const activationClients=Array.from({length:8},(_,index)=>new Client(ports[index%ports.length]));await Promise.all(activationClients.map(client=>client.call('sessao')));
+ const activations=await Promise.all(activationClients.map(client=>client.call('ativacao','POST',{token,senha:'SenhaFicticia123!'})));
+ assert.deepEqual(activations.map(result=>result.status).sort(),[200,...Array(7).fill(400)]);ok('ativação concorrente é atômica e exige CSRF');
+ assert.equal((await visitor.call('ativacao','POST',{token,senha:'OutraSenhaFicticia123!'})).status,400);ok('convite ativa conta uma única vez');
+ const ongAdmin=await new Client().login(request.email);const ongSession=await ongAdmin.call('sessao');assert.equal(ongSession.usuario.perfil,'ong');assert.deepEqual(ongSession.ongs,[published.acesso.ongId]);assert.equal((await ongAdmin.call('projetos','DELETE',{},1)).status,403);ok('aprovação cria convite e vínculo com acesso restrito');
+ const requestLinked={...request,cnpj:'98765432000102'};const linked=await visitor.call('solicitacoes','POST',requestLinked);const linkedResult=await admin.call('publicar','POST',{...requestLinked,categoria:'Educação'},linked.id);assert.equal(linkedResult.status,200);assert.equal(linkedResult.acesso.contaCriada,false);assert.equal(linkedResult.acesso.ativacao,null);await new Client().login(request.email);ok('responsável existente recebe vínculo sem alteração da senha');
  const requestConflict={...request,cnpj:'98765432000103',email:'voluntario@example.com'};const conflicting=await visitor.call('solicitacoes','POST',requestConflict);const beforeConflict=(await visitor.call('catalogo')).ongs.length;assert.equal((await admin.call('publicar','POST',{...requestConflict,categoria:'Educação'},conflicting.id)).status,409);assert.equal((await visitor.call('catalogo')).ongs.length,beforeConflict);assert.equal((await admin.call('solicitacoes')).solicitacoes.find(s=>s.id===conflicting.id).status,'Pendente');ok('conflito de perfil reverte publicação e preserva solicitação');
- const safeCatalog=JSON.stringify(await visitor.call('catalogo'));const safeRequests=JSON.stringify(await admin.call('solicitacoes'));assert.equal(safeCatalog.includes(published.acesso.senhaInicial),false);assert.equal(safeRequests.includes(published.acesso.senhaInicial),false);ok('senha inicial não aparece no catálogo nem no histórico');
+ const safeCatalog=JSON.stringify(await visitor.call('catalogo'));const safeRequests=JSON.stringify(await admin.call('solicitacoes'));assert.equal(safeCatalog.includes(token),false);assert.equal(safeRequests.includes(token),false);ok('convite não aparece no catálogo nem no histórico');
  const r2=await visitor.call('solicitacoes','POST',{...request,cnpj:'98765432000101'});assert.equal((await admin.call('rejeitar','POST',{motivo:'Dados fictícios insuficientes'},r2.id)).status,200);ok('rejeição de ONG');
  const third=new Client();await third.call('sessao');await third.call('cadastro','POST',{nome:'Terceira Pessoa Fictícia',email:'terceira@example.com',senha:'SenhaFicticia123!'});await third.login('terceira@example.com');
  const q1=await make(approved.usuario_id===3?vol:fresh);assert.equal(q1.status,201,JSON.stringify(q1));const q2=await make(third);assert.equal(q2.status,201);
@@ -90,6 +107,18 @@ async function main(){
  const limited=new Client();await limited.call('sessao');let rate;
  for(let i=0;i<11;i++){rate=await limited.call('login','POST',{email:'inexistente@example.com',senha:'SenhaErradaFicticia'});if(rate.status===429)break;assert.equal(rate.status,401);}
  assert.equal(rate.status,429);ok('limitação de tentativas de login');
+ const longPassword='a'.repeat(72)+'X';
+ assert.equal((await visitor.call('cadastro','POST',{nome:'Senha longa',email:'long-password@example.com',senha:longPassword})).status,200);
+ assert.equal((await visitor.call('login','POST',{email:'long-password@example.com',senha:'a'.repeat(72)+'Y'})).status,401);
+ await new Client().login('long-password@example.com',longPassword);ok('senha longa mantém distinção de sufixos pela API');
+ const guarded=new Client();await guarded.call('sessao');
+ for(let i=0;i<7;i++)assert.equal((await guarded.call('login','POST',{email:'long-password@example.com',senha:'invalida'})).status,401);
+ assert.equal((await guarded.call('login','POST',{email:'long-password@example.com',senha:longPassword})).status,200);
+ assert.equal((await guarded.call('login','POST',{email:'long-password@example.com',senha:longPassword})).status,429);ok('login válido não apaga contador da conta');
+ rate=null;for(let i=0;i<12;i++){const result=await visitor.call('cadastro','POST',{nome:'Teste',email:'limit@example.com',senha:'SenhaFicticia123!'});if(result.status===429){rate=result;break;}assert.equal(result.status,200);}
+ assert.equal(rate.status,429);ok('cadastros limitados por IP');
+ let requestLimit;for(let i=0;i<21;i++){requestLimit=await visitor.call('solicitacoes','POST',{});if(requestLimit.status===429)break;assert.equal(requestLimit.status,422);}
+ assert.equal(requestLimit.status,429);ok('solicitações inválidas também consomem limite');
  console.log(`${passed} verificações aprovadas. Banco preservado para inspeção: ${env.DB_DATABASE}`);
 }
 main().catch(e=>{console.error(e);process.exitCode=1}).finally(()=>{for(const p of servers)p.kill()});

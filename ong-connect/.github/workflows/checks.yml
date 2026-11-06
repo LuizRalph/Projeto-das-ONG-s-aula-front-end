@@ -1,0 +1,56 @@
+name: Verificações
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ong-connect
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci-only-password
+          MARIADB_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USERNAME: root
+      DB_PASSWORD: ci-only-password
+      PHP_BINARY: php
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_mysql, mbstring, fileinfo
+          coverage: none
+      - name: Preparar configuração de testes
+        run: cp config/database.example.php config/database.php
+      - name: Verificar sintaxe PHP
+        run: find ong-connect/api scripts config -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Verificar sintaxe JavaScript
+        run: find ong-connect/assets/js scripts \( -name '*.js' -o -name '*.cjs' \) -print0 | xargs -0 -n1 node --check
+      - name: Testar cliente
+        run: node scripts/test-client.cjs
+      - name: Testar integração
+        run: node scripts/test-shared.cjs

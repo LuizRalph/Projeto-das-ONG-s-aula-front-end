@@ -7,14 +7,20 @@ document.addEventListener('DOMContentLoaded',async()=>{
     overlay.innerHTML='<section class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="ong-access-title"><div class="modal-header"><h2 id="ong-access-title">Acesso da ONG</h2><button class="modal-close" type="button" aria-label="Fechar">×</button></div><div class="modal-scroll"><p data-ong></p><p data-note></p><div class="form-group"><label>E-mail de acesso<input class="field" data-email readonly autocomplete="off"></label></div><div class="form-group" data-password-group><label>Senha inicial<input class="field" data-password readonly autocomplete="off"></label></div><p>O responsável pode acessar a página Entrar e gerenciar os projetos e voluntários das ONGs vinculadas à sua conta.</p><button class="btn" type="button" data-done>Concluir</button></div></section>';
     overlay.querySelector('[data-ong]').textContent=access.ongNome;
     overlay.querySelector('[data-email]').value=access.email;
-    overlay.querySelector('[data-password-group]').hidden=!access.contaCriada;
-    overlay.querySelector('[data-password]').value=access.senhaInicial||'';
-    overlay.querySelector('[data-note]').textContent=access.contaCriada?'Conta criada. Anote e entregue estas credenciais ao responsável. A senha é exibida somente nesta confirmação.':'O e-mail já possui uma conta de responsável por ONG. A ONG foi vinculada a ela; a senha existente foi mantida.';
+    overlay.querySelector('[data-password-group] label').firstChild.textContent='Link de ativação (24 horas)';
+    overlay.querySelector('[data-password-group]').hidden=!access.ativacao;
+    overlay.querySelector('[data-password]').value=access.ativacao?new URL(base+access.ativacao,location.href).href:'';
+    overlay.querySelector('[data-note]').textContent=access.ativacao?'Entregue este link ao responsável por um canal privado. Ele definirá a própria senha. O convite expira em 24 horas e só pode ser utilizado uma vez.':'A ONG foi vinculada à conta existente. Se ela ainda não foi ativada, gere um novo convite.';
     const previous=document.activeElement;
     const close=()=>{overlay.querySelector('[data-password]').value='';overlay.remove();if(!document.querySelector('.modal-overlay:not([hidden])'))document.body.classList.remove('modal-open');previous?.focus()};
     overlay.querySelector('.modal-close').onclick=close;overlay.querySelector('[data-done]').onclick=close;
     overlay.addEventListener('keydown',e=>{if(e.key==='Escape'){close();return;}if(e.key==='Tab'){const fields=[...overlay.querySelectorAll('button,input')].filter(el=>el.getClientRects().length),first=fields[0],last=fields.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}}});
     document.body.append(overlay);document.body.classList.add('modal-open');overlay.querySelector('[data-email]').focus();
+  }
+  if(isOng){
+    const button=document.createElement('button');button.type='button';button.className='btn btn-outline';button.textContent='Reemitir convite de ativação';
+    button.onclick=async()=>{const email=prompt('E-mail da conta de ONG pendente de ativação:');if(!email)return;button.disabled=true;try{const access=await apiRequest('convite','POST',{email});showOngAccess({...access,ongNome:'Novo convite',contaCriada:false})}catch(error){toast(error.message,true)}finally{button.disabled=false}};
+    main.prepend(button);
   }
   let requestStatus=nav.get('requestStatus','Pendente');
   const statuses=[['Pendente','Pendentes'],['Cadastrada','Publicadas'],['Rejeitado','Rejeitadas'],['Todas','Todas']];
